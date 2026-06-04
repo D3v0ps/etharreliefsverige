@@ -293,7 +293,12 @@
         // No endpoint configured yet — simulate success so the UX is testable.
         setTimeout(done,600); return;
       }
-      fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:data.toString()})
+      var opts={method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:data.toString()};
+      // Google Apps Script-webbappar skickar inga CORS-headers, så att läsa svaret
+      // ger ett CORS-fel även när raden sparats. Skicka därför "fire-and-forget"
+      // (no-cors -> opaque) för dem; success-kollen nedan hanterar opaque-svar.
+      if(/script\.google(usercontent)?\.com/.test(endpoint)) opts.mode="no-cors";
+      fetch(endpoint,opts)
         .then(function(r){ if(r.ok||r.type==="opaque") done(); else fail(); })
         .catch(fail);
     });

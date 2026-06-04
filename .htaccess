@@ -1,13 +1,23 @@
-# Ethar Cup — statisk undermapp.
-# Ligger bredvid WordPress och påverkar inte huvudsidan: WordPress
-# rewrite-regler i rotmappen rör bara förfrågningar som INTE matchar en
-# riktig fil/mapp (!-f / !-d), så den här mappens filer serveras som de är.
+# Ethar Cup — statisk mapp för turneringssidan (t.ex. /turnering/).
+# Reglerna här gäller BARA den här mappen. WordPress i rotmappen påverkas inte:
+# WP:s rewrite rör bara adresser som inte matchar en riktig fil/mapp, och
+# per-mapp-regler ärvs inte mellan mappar.
 
-# Visa index.html när man besöker mappen (t.ex. /cup/).
+# Startsida när man besöker mappen:  /turnering/  ->  index.html
 DirectoryIndex index.html
 
-# Stäng av URL-omskrivning lokalt i den här mappen (behövs inte för statiska
-# filer, och hindrar att eventuella ärvda regler stör). PHP körs ändå normalt.
 <IfModule mod_rewrite.c>
-  RewriteEngine Off
+  RewriteEngine On
+
+  # Snygg admin-adress utan .html:  /turnering/admin
+  # Läggs en slash till skickas man till versionen utan (annars bryts de
+  # relativa sökvägarna i admin.html). Byt /turnering/ om mappen heter annat.
+  RewriteRule ^admin/$ /turnering/admin [R=301,L]
+
+  # Servera admin.html på /turnering/admin (om ingen riktig fil heter "admin").
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^admin$ admin.html [L]
+
+  # Allt annat (index.html, styles.css, app.js, config.json, admin.html …)
+  # är riktiga filer och serveras direkt — inga andra omskrivningar.
 </IfModule>

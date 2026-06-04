@@ -124,7 +124,7 @@
     "copyright": "© 2026 Ethar Relief Sverige · Remembering the Forgotten."
   },
   "settings": {
-    "formEndpoint": "",
+    "formEndpoint": "https://script.google.com/macros/s/AKfycbzprkGZ_uRAc0TmPJM3eqVEnxWFxdODTxq4THVAedBVUGfHgoWc7vSwYI3PD2gh7xpCNw/exec",
     "adminPassword": "ethar2026"
   }
 }
