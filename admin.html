@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Adminportal — Ethar Cup</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231F4743'/%3E%3Ctext x='32' y='44' font-family='sans-serif' font-size='30' font-weight='800' fill='%23ED6967' text-anchor='middle'%3E%E2%9A%99%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#1F4743;--primary-dark:#14302C;--accent:#ED6967;--accent-dark:#D85650;
+  --bg:#EEF1ED;--surface:#fff;--ink:#1B2620;--muted:#67756C;--line:#dce3dd;
+  --radius:12px;--font-head:"Montserrat",sans-serif;--font-body:"Mulish",sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--ink);height:100vh;overflow:hidden;}
+button{font-family:var(--font-head);cursor:pointer;}
+input,textarea,select{font-family:var(--font-body);}
+h1,h2,h3{font-family:var(--font-head);margin:0;}
+a{color:var(--primary);}
+
+/* ---- login gate ---- */
+.gate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,var(--primary),var(--primary-dark));display:grid;place-items:center;}
+.gate-card{background:#fff;border-radius:20px;padding:40px;width:min(400px,90vw);box-shadow:0 30px 80px rgba(0,0,0,.4);text-align:center;}
+.gate-card .mark{width:56px;height:56px;border-radius:14px;background:var(--accent);color:var(--primary-dark);display:grid;place-items:center;font-family:var(--font-head);font-weight:800;font-size:1.6rem;margin:0 auto 18px;}
+.gate-card h1{font-size:1.5rem;color:var(--primary);margin-bottom:6px;}
+.gate-card p{color:var(--muted);font-size:.92rem;margin:0 0 22px;}
+.gate-card input{width:100%;padding:13px 15px;border:1.5px solid var(--line);border-radius:10px;font-size:1rem;margin-bottom:12px;}
+.gate-card input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.12);}
+.gate-card button{width:100%;background:var(--primary);color:#fff;border:0;padding:14px;border-radius:10px;font-size:1rem;font-weight:700;}
+.gate-card button:hover{background:var(--primary-dark);}
+.gate-err{color:#b32d2d;font-size:.88rem;margin-top:10px;min-height:1em;}
+
+/* ---- app layout ---- */
+.app{display:none;grid-template-rows:auto 1fr;height:100vh;}
+.app.on{display:grid;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 20px;background:var(--primary);color:#fff;}
+.topbar .brand{display:flex;align-items:center;gap:12px;font-family:var(--font-head);font-weight:800;}
+.topbar .brand .mk{width:34px;height:34px;border-radius:9px;background:var(--accent);color:var(--primary-dark);display:grid;place-items:center;font-size:1.1rem;}
+.topbar .brand small{display:block;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;opacity:.7;font-weight:600;font-family:var(--font-body);}
+.actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.act{border:0;border-radius:9px;padding:10px 16px;font-weight:700;font-size:.9rem;display:inline-flex;align-items:center;gap:7px;}
+.act-ghost{background:rgba(255,255,255,.12);color:#fff;}
+.act-ghost:hover{background:rgba(255,255,255,.2);}
+.act-primary{background:var(--accent);color:#fff;}
+.act-primary:hover{background:var(--accent-dark);color:#fff;}
+.act svg{width:16px;height:16px;}
+.saved-dot{font-size:.82rem;opacity:.85;display:flex;align-items:center;gap:6px;}
+.saved-dot i{width:8px;height:8px;border-radius:50%;background:#7bd88f;display:inline-block;}
+.saved-dot.dirty i{background:var(--accent);}
+
+.main{display:grid;grid-template-columns:240px 1fr 1fr;min-height:0;}
+@media (max-width:1100px){.main{grid-template-columns:200px 1fr;}}
+
+/* ---- side nav ---- */
+.sidenav{background:var(--surface);border-right:1px solid var(--line);overflow-y:auto;padding:14px 10px;}
+.sidenav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:11px 14px;border-radius:9px;font-weight:600;font-size:.92rem;color:var(--ink);margin-bottom:2px;}
+.sidenav button:hover{background:#f0f3f0;}
+.sidenav button.active{background:var(--primary);color:#fff;}
+.sidenav .num{width:22px;height:22px;border-radius:6px;background:#eef1ed;color:var(--muted);display:grid;place-items:center;font-size:.72rem;font-weight:700;flex:none;}
+.sidenav button.active .num{background:rgba(255,255,255,.2);color:#fff;}
+
+/* ---- editor ---- */
+.editor{overflow-y:auto;padding:28px 30px 80px;background:var(--bg);}
+.editor-head{margin-bottom:22px;}
+.editor-head h2{font-size:1.5rem;color:var(--primary);}
+.editor-head p{color:var(--muted);font-size:.92rem;margin:6px 0 0;}
+.fld{margin-bottom:18px;}
+.fld>label{display:block;font-family:var(--font-head);font-weight:600;font-size:.85rem;color:var(--primary);margin-bottom:6px;}
+.fld .hint{font-size:.78rem;color:var(--muted);font-weight:400;margin-top:3px;}
+.fld input[type=text],.fld input[type=url],.fld input[type=email],.fld textarea,.fld select{
+  width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font-size:.95rem;background:#fff;color:var(--ink);
+}
+.fld textarea{resize:vertical;min-height:80px;line-height:1.5;}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.1);}
+.color-row{display:flex;align-items:center;gap:10px;}
+.color-row input[type=color]{width:46px;height:42px;border:1.5px solid var(--line);border-radius:9px;padding:2px;background:#fff;cursor:pointer;flex:none;}
+.color-row input[type=text]{flex:1;font-family:monospace;}
+
+/* list editor */
+.listed{border:1px solid var(--line);border-radius:12px;background:#fff;padding:6px;margin-top:4px;}
+.list-item{border:1px solid var(--line);border-radius:9px;padding:12px;margin:6px;background:#fbfcfb;position:relative;}
+.list-item .li-grid{display:grid;gap:10px;}
+.li-2{grid-template-columns:1fr 1fr;}
+.li-tools{position:absolute;top:8px;right:8px;display:flex;gap:4px;}
+.li-tools button{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--muted);display:grid;place-items:center;font-size:.8rem;}
+.li-tools button:hover{background:#f0f3f0;color:var(--ink);}
+.li-tools .del:hover{background:#fdecec;color:#b32d2d;border-color:#f3b4b4;}
+.add-btn{width:calc(100% - 12px);margin:6px;padding:11px;border:1.5px dashed var(--line);background:#fff;border-radius:9px;color:var(--primary);font-weight:700;font-size:.9rem;}
+.add-btn:hover{border-color:var(--primary);background:#f4f8f5;}
+.li-sub{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px;display:block;}
+
+/* ---- preview ---- */
+.preview-pane{background:#222;border-left:1px solid #000;display:flex;flex-direction:column;min-width:0;}
+.preview-bar{background:#1a1a1a;color:#bbb;padding:8px 14px;font-size:.8rem;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.preview-bar .dots{display:flex;gap:5px;}
+.preview-bar .dots i{width:11px;height:11px;border-radius:50%;background:#444;display:inline-block;}
+.preview-bar select{background:#333;color:#ddd;border:1px solid #444;border-radius:6px;padding:4px 8px;font-size:.78rem;}
+.preview-wrap{flex:1;overflow:hidden;background:#333;display:grid;place-items:center;}
+.preview-wrap iframe{width:100%;height:100%;border:0;background:#fff;}
+.pv-close{display:none;}
+@media (max-width:1100px){
+  .preview-pane{display:none;}
+  .preview-pane.show{display:flex;position:fixed;inset:0;z-index:60;}
+  .pv-close{display:inline-flex;}
+}
+
+.note{background:#fffaf0;border:1px solid #f0dcb0;border-radius:10px;padding:14px 16px;font-size:.88rem;color:#7a5a1f;margin-bottom:20px;line-height:1.5;}
+.note b{color:var(--accent-dark);}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary);color:#fff;padding:14px 22px;border-radius:12px;font-weight:600;font-size:.92rem;box-shadow:0 12px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.3s;z-index:90;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ===== Login gate ===== -->
+<div class="gate" id="gate">
+  <form class="gate-card" id="gateForm">
+    <div class="mark">E</div>
+    <h1>Adminportal</h1>
+    <p>Ethar Cup — innehållshantering</p>
+    <input type="password" id="pw" placeholder="Lösenord" autocomplete="current-password" autofocus>
+    <button type="submit">Logga in</button>
+    <div class="gate-err" id="gateErr"></div>
+  </form>
+</div>
+
+<!-- ===== App ===== -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand"><span class="mk">E</span><span>Ethar Cup<small>Adminportal</small></span></div>
+    <div class="actions">
+      <span class="saved-dot" id="savedDot"><i></i><span id="savedText">Sparat</span></span>
+      <button class="act act-ghost pv-toggle" id="pvToggle" style="display:none">Förhandsgranska</button>
+      <button class="act act-ghost" id="resetBtn" title="Återställ till senast publicerade">Återställ</button>
+      <button class="act act-primary" id="exportBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Publicera (ladda ner)
+      </button>
+      <button class="act act-ghost" id="logoutBtn">Logga ut</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <nav class="sidenav" id="sidenav"></nav>
+    <section class="editor" id="editor"></section>
+    <aside class="preview-pane" id="previewPane">
+      <div class="preview-bar">
+        <span class="dots"><i></i><i></i><i></i></span>
+        <span>Live förhandsgranskning</span>
+        <button class="act act-ghost pv-close" id="pvClose" style="padding:4px 10px">Stäng</button>
+      </div>
+      <div class="preview-wrap"><iframe id="preview" src="index.html?preview=1" title="Förhandsgranskning"></iframe></div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   Ethar Cup — Admin portal
+   Schema-driven content editor with live preview + export.
+   ========================================================= */
+(function(){
+"use strict";
+
+/* ----- schema describing every editable field ----- */
+var SCHEMA=[
+  {key:"brand",icon:"🎨",label:"Varumärke",desc:"Namn, logotyp och färger för hela sidan.",fields:[
+    {k:"name",label:"Organisationens namn",type:"text"},
+    {k:"tagline",label:"Slogan / motto",type:"text"},
+    {k:"logoUrl",label:"Logotyp-URL",type:"text",hint:"Länk till en vit logotyp (PNG/SVG). Lämna tomt för automatisk text-logga."},
+    {k:"primary",label:"Primärfärg",type:"color"},
+    {k:"primaryDark",label:"Primärfärg (mörk)",type:"color"},
+    {k:"accent",label:"Accentfärg",type:"color"},
+    {k:"accentDark",label:"Accentfärg (mörk)",type:"color"},
+    {k:"bg",label:"Bakgrundsfärg",type:"color"}
+  ]},
+  {key:"nav",icon:"🧭",label:"Meny",desc:"Navigeringslänkar i sidhuvudet.",fields:[
+    {k:"donateLabel",label:"Text på donera-knapp",type:"text"},
+    {k:"items",label:"Menylänkar",type:"list",hint:"Sektion-id ska matcha en sektion: om, turneringen, anmal, hittahit, donera.",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"target",label:"Sektion-id",type:"text"}]}
+  ]},
+  {key:"hero",icon:"⭐",label:"Hero",desc:"Det första besökaren ser högst upp.",fields:[
+    {k:"eyebrow",label:"Liten överrubrik",type:"text"},
+    {k:"title",label:"Rubrik (turneringens namn)",type:"text"},
+    {k:"subtitle",label:"Underrubrik",type:"textarea"},
+    {k:"imageUrl",label:"Bakgrundsbild-URL",type:"text",hint:"Foto från turneringen. Lämna tomt för enbart färg."},
+    {k:"chips",label:"Fakta-chips",type:"list",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"value",label:"Värde",type:"text"}]},
+    {k:"ctaPrimary.label",label:"Knapp 1 — text",type:"text"},
+    {k:"ctaPrimary.target",label:"Knapp 1 — sektion-id",type:"text"},
+    {k:"ctaSecondary.label",label:"Knapp 2 — text",type:"text"},
+    {k:"ctaSecondary.target",label:"Knapp 2 — sektion-id",type:"text"}
+  ]},
+  {key:"about",icon:"💬",label:"Om Ethar",desc:"Vilka ni är och era fokusområden.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"paragraphs",label:"Stycken",type:"list",item:[{k:"",label:"Stycke",type:"textarea"}]},
+    {k:"linkText",label:"Länktext",type:"text"},
+    {k:"linkUrl",label:"Länk-URL",type:"text"},
+    {k:"focusAreas",label:"Fokusområden",type:"list",hint:"Ikon: water, school, heart, food, women, aid.",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"icon",label:"Ikon",type:"text"}]}
+  ]},
+  {key:"social",icon:"🎉",label:"Folkfest 2024",desc:"Social proof, press och Instagram.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"paragraphs",label:"Stycken",type:"list",item:[{k:"",label:"Stycke",type:"textarea"}]},
+    {k:"stats",label:"Siffror",type:"list",item:[
+      {k:"value",label:"Värde",type:"text"},{k:"label",label:"Etikett",type:"text"}]},
+    {k:"press.kicker",label:"Press — etikett",type:"text"},
+    {k:"press.title",label:"Press — rubrik",type:"text"},
+    {k:"press.linkText",label:"Press — länktext",type:"text"},
+    {k:"press.linkUrl",label:"Press — länk-URL",type:"text"},
+    {k:"instagram",label:"Instagram-inlägg",type:"list",hint:"Bild-URL valfri (annars mönsterbakgrund).",item:[
+      {k:"url",label:"Inläggs-URL",type:"text"},{k:"caption",label:"Bildtext",type:"text"},{k:"imageUrl",label:"Bild-URL (valfri)",type:"text"}]}
+  ]},
+  {key:"format",icon:"📋",label:"Format",desc:"Hur turneringen går till.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"items",label:"Info-kort",type:"list",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"value",label:"Värde",type:"text"}]},
+    {k:"note",label:"Notis under korten",type:"textarea"}
+  ]},
+  {key:"teamForm",icon:"📝",label:"Laganmälan",desc:"Texter kring anmälningsformuläret.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"intro",label:"Introtext",type:"textarea"},
+    {k:"fallbackEmail",label:"Fallback e-post",type:"text",hint:"Visas om formuläret inte fungerar."},
+    {k:"successTitle",label:"Bekräftelse — rubrik",type:"text"},
+    {k:"successText",label:"Bekräftelse — text",type:"textarea"}
+  ]},
+  {key:"findus",icon:"📍",label:"Hitta hit",desc:"Praktisk information och karta.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"items",label:"Info-rader",type:"list",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"value",label:"Värde",type:"text"}]},
+    {k:"mapsQuery",label:"Adress för karta",type:"text"},
+    {k:"mapsLabel",label:"Knapptext (karta)",type:"text"}
+  ]},
+  {key:"donate",icon:"❤️",label:"Donera",desc:"Swish och plusgiro.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"intro",label:"Introtext",type:"textarea"},
+    {k:"swish",label:"Swish-nummer",type:"text"},
+    {k:"plusgiro",label:"Plusgiro",type:"text"},
+    {k:"swishUrl",label:"Swish-länk (URL)",type:"text"},
+    {k:"message",label:"Märkning av gåva",type:"text"}
+  ]},
+  {key:"footer",icon:"🔻",label:"Sidfot",desc:"Sociala länkar och copyright.",fields:[
+    {k:"socials",label:"Sociala länkar",type:"list",item:[
+      {k:"label",label:"Etikett",type:"text"},{k:"url",label:"URL",type:"text"}]},
+    {k:"copyright",label:"Copyright-text",type:"text"}
+  ]},
+  {key:"settings",icon:"⚙️",label:"Inställningar",desc:"Formulär-endpoint och lösenord.",fields:[
+    {k:"formEndpoint",label:"Formulär-endpoint (URL)",type:"text",hint:"Google Apps Script eller Formspree. Tomt = test-läge (visar bekräftelse utan att skicka)."},
+    {k:"adminPassword",label:"Admin-lösenord",type:"text",hint:"Ändra för att byta lösenord till denna portal. Obs: enkel klient-skydd, inte banknivå."}
+  ]}
+];
+
+var DRAFT_KEY="etharCupDraft_v1";
+var AUTH_KEY="etharCupAuth_v1";
+var config=null, published=null, activeSection="brand", dirty=false, postTimer=null;
+
+/* ---- helpers ---- */
+function $(s){return document.querySelector(s);}
+function getPath(obj,path){ if(!path) return obj; return path.split(".").reduce(function(o,k){return o==null?undefined:o[k];},obj); }
+function setPath(obj,path,val){ var ks=path.split("."),o=obj; for(var i=0;i<ks.length-1;i++){ if(o[ks[i]]==null||typeof o[ks[i]]!=="object") o[ks[i]]={}; o=o[ks[i]]; } o[ks[ks.length-1]]=val; }
+function clone(o){return JSON.parse(JSON.stringify(o));}
+function toast(msg){var t=$("#toast");t.textContent=msg;t.classList.add("show");setTimeout(function(){t.classList.remove("show");},2200);}
+
+/* ---- load config ---- */
+function loadConfig(){
+  return fetch("config.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    published = j || (window.FALLBACK_CONFIG||{});
+    var draft=null;
+    try{ var d=localStorage.getItem(DRAFT_KEY); if(d) draft=JSON.parse(d); }catch(e){}
+    config = draft || clone(published);
+    dirty = !!draft;
+  }).catch(function(){
+    published = window.FALLBACK_CONFIG||{}; config=clone(published);
+  });
+}
+
+/* ---- render side nav ---- */
+function renderNav(){
+  $("#sidenav").innerHTML = SCHEMA.map(function(s,i){
+    return '<button data-sec="'+s.key+'" class="'+(s.key===activeSection?"active":"")+'">'+
+      '<span class="num">'+(i+1)+'</span>'+s.label+'</button>';
+  }).join("");
+  $("#sidenav").querySelectorAll("button").forEach(function(b){
+    b.onclick=function(){ activeSection=b.dataset.sec; renderNav(); renderEditor(); $("#editor").scrollTop=0; };
+  });
+}
+
+/* ---- render editor for active section ---- */
+function renderEditor(){
+  var sec=SCHEMA.filter(function(s){return s.key===activeSection;})[0];
+  var secData=config[sec.key]; if(secData==null){secData={};config[sec.key]=secData;}
+  var html='<div class="editor-head"><h2>'+sec.label+'</h2><p>'+sec.desc+'</p></div>';
+  if(sec.key==="settings"){
+    html+='<div class="note"><b>Så publicerar du:</b> ändra innehållet här, klicka <b>Publicera (ladda ner)</b> för att hämta en ny <b>config.json</b>, och ladda upp den filen till webbservern (samma mapp som index.html). Då uppdateras den publika sidan för alla besökare.</div>';
+  }
+  sec.fields.forEach(function(f){ html+=renderField(sec.key,f,secData); });
+  $("#editor").innerHTML=html;
+  bindFields(sec);
+}
+
+function renderField(secKey,f,data){
+  var id="fld__"+secKey+"__"+f.k.replace(/\./g,"_");
+  if(f.type==="list"){
+    var arr=getPath(data,f.k)||[];
+    var items=arr.map(function(it,idx){ return renderListItem(f,it,idx); }).join("");
+    return '<div class="fld" data-list="'+f.k+'"><label>'+f.label+'</label>'+
+      (f.hint?'<div class="hint">'+f.hint+'</div>':'')+
+      '<div class="listed">'+items+
+      '<button class="add-btn" data-add="'+f.k+'">+ Lägg till</button></div></div>';
+  }
+  var val=getPath(data,f.k); if(val==null) val="";
+  if(f.type==="color"){
+    var safe=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(val)?val:"#000000";
+    return '<div class="fld"><label>'+f.label+'</label><div class="color-row">'+
+      '<input type="color" id="'+id+'_c" value="'+safe+'" data-path="'+f.k+'" data-sync="'+id+'_t">'+
+      '<input type="text" id="'+id+'_t" value="'+escAttr(val)+'" data-path="'+f.k+'" data-sync="'+id+'_c"></div></div>';
+  }
+  if(f.type==="textarea"){
+    return '<div class="fld"><label>'+f.label+'</label>'+(f.hint?'<div class="hint">'+f.hint+'</div>':'')+
+      '<textarea id="'+id+'" data-path="'+f.k+'">'+escHtml(val)+'</textarea></div>';
+  }
+  return '<div class="fld"><label>'+f.label+'</label>'+(f.hint?'<div class="hint">'+f.hint+'</div>':'')+
+    '<input type="text" id="'+id+'" data-path="'+f.k+'" value="'+escAttr(val)+'"></div>';
+}
+
+function renderListItem(f,it,idx){
+  var sub=f.item;
+  var grid;
+  if(sub.length===1 && sub[0].k===""){
+    grid='<textarea data-li="'+f.k+'" data-idx="'+idx+'" data-sk="">'+escHtml(it)+'</textarea>';
+  } else {
+    var twoCol = sub.length>=2 && sub.every(function(s){return s.type==="text";});
+    grid='<div class="li-grid '+(twoCol?'li-2':'')+'">'+sub.map(function(s){
+      var v=s.k?(it[s.k]||""):it;
+      var ctrl=s.type==="textarea"
+        ?'<textarea data-li="'+f.k+'" data-idx="'+idx+'" data-sk="'+s.k+'">'+escHtml(v)+'</textarea>'
+        :'<input type="text" data-li="'+f.k+'" data-idx="'+idx+'" data-sk="'+s.k+'" value="'+escAttr(v)+'">';
+      return '<div><span class="li-sub">'+s.label+'</span>'+ctrl+'</div>';
+    }).join("")+'</div>';
+  }
+  return '<div class="list-item"><div class="li-tools">'+
+    '<button class="up" data-mv="up" data-list="'+f.k+'" data-idx="'+idx+'" title="Flytta upp">↑</button>'+
+    '<button class="down" data-mv="down" data-list="'+f.k+'" data-idx="'+idx+'" title="Flytta ner">↓</button>'+
+    '<button class="del" data-del="'+f.k+'" data-idx="'+idx+'" title="Ta bort">✕</button>'+
+    '</div>'+grid+'</div>';
+}
+
+function escAttr(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");}
+function escHtml(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+/* ---- bind inputs ---- */
+function bindFields(sec){
+  var data=config[sec.key];
+  // simple fields
+  $("#editor").querySelectorAll("[data-path]").forEach(function(el){
+    el.addEventListener("input",function(){
+      setPath(data,el.dataset.path,el.value);
+      if(el.dataset.sync){var o=document.getElementById(el.dataset.sync); if(o&&o.value!==el.value)o.value=el.value;}
+      onChange();
+    });
+  });
+  // list item fields
+  $("#editor").querySelectorAll("[data-li]").forEach(function(el){
+    el.addEventListener("input",function(){
+      var lk=el.dataset.li, idx=+el.dataset.idx, sk=el.dataset.sk;
+      var arr=getPath(data,lk); if(!arr) return;
+      if(sk==="") arr[idx]=el.value; else arr[idx][sk]=el.value;
+      onChange();
+    });
+  });
+  // add
+  $("#editor").querySelectorAll("[data-add]").forEach(function(b){
+    b.onclick=function(){
+      var lk=b.dataset.add; var f=findField(sec,lk);
+      var arr=getPath(data,lk); if(!arr){arr=[];setPath(data,lk,arr);}
+      arr.push(blankItem(f));
+      onChange(); renderEditor();
+    };
+  });
+  // delete
+  $("#editor").querySelectorAll("[data-del]").forEach(function(b){
+    b.onclick=function(){
+      var arr=getPath(data,b.dataset.del); arr.splice(+b.dataset.idx,1); onChange(); renderEditor();
+    };
+  });
+  // move
+  $("#editor").querySelectorAll("[data-mv]").forEach(function(b){
+    b.onclick=function(){
+      var arr=getPath(data,b.dataset.list),i=+b.dataset.idx,j=b.dataset.mv==="up"?i-1:i+1;
+      if(j<0||j>=arr.length)return; var t=arr[i];arr[i]=arr[j];arr[j]=t; onChange(); renderEditor();
+    };
+  });
+}
+function findField(sec,k){return sec.fields.filter(function(f){return f.k===k;})[0];}
+function blankItem(f){
+  if(!f||!f.item) return "";
+  if(f.item.length===1&&f.item[0].k==="") return "";
+  var o={}; f.item.forEach(function(s){o[s.k]="";}); return o;
+}
+
+/* ---- change handling ---- */
+function onChange(){
+  dirty=true; updateSavedDot();
+  try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(config)); }catch(e){}
+  schedulePost();
+}
+function updateSavedDot(){
+  var d=$("#savedDot");
+  if(dirty){ d.classList.add("dirty"); $("#savedText").textContent="Osparade ändringar (utkast)"; }
+  else { d.classList.remove("dirty"); $("#savedText").textContent="Publicerat"; }
+}
+function schedulePost(){ clearTimeout(postTimer); postTimer=setTimeout(postToPreview,180); }
+function postToPreview(){
+  var f=$("#preview"); if(f&&f.contentWindow){ f.contentWindow.postMessage({__etharConfig:true,config:clone(config)},"*"); }
+}
+
+/* ---- actions ---- */
+function exportConfig(){
+  var blob=new Blob([JSON.stringify(config,null,2)],{type:"application/json"});
+  var url=URL.createObjectURL(blob); var a=document.createElement("a");
+  a.href=url; a.download="config.json"; document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove();},100);
+  toast("config.json nedladdad — ladda upp den till servern för att publicera.");
+}
+function resetDraft(){
+  if(!confirm("Återställ alla ändringar till den senast publicerade versionen? Ditt utkast tas bort.")) return;
+  try{localStorage.removeItem(DRAFT_KEY);}catch(e){}
+  config=clone(published); dirty=false; updateSavedDot(); renderEditor(); postToPreview();
+  toast("Återställt till publicerad version.");
+}
+
+/* ---- auth ---- */
+function currentPassword(){ return (config&&config.settings&&config.settings.adminPassword)||(published&&published.settings&&published.settings.adminPassword)||"ethar2026"; }
+function tryLogin(pw){
+  if(pw===currentPassword()){
+    try{sessionStorage.setItem(AUTH_KEY,"1");}catch(e){}
+    showApp(); return true;
+  }
+  return false;
+}
+function showApp(){
+  $("#gate").style.display="none";
+  $("#app").classList.add("on");
+  renderNav(); renderEditor(); updateSavedDot();
+}
+
+/* ---- preview ready handshake ---- */
+window.addEventListener("message",function(ev){
+  if(ev.data&&ev.data.__etharReady){ postToPreview(); }
+});
+
+/* ---- boot ---- */
+loadConfig().then(function(){
+  // gate
+  $("#gateForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    if(!tryLogin($("#pw").value)){ $("#gateErr").textContent="Fel lösenord. Försök igen."; $("#pw").select(); }
+  });
+  if(sessionStorage.getItem(AUTH_KEY)==="1"){ showApp(); }
+
+  $("#exportBtn").onclick=exportConfig;
+  $("#resetBtn").onclick=resetDraft;
+  $("#logoutBtn").onclick=function(){ try{sessionStorage.removeItem(AUTH_KEY);}catch(e){} location.reload(); };
+  // mobile preview toggle
+  var pvToggle=$("#pvToggle"), pvClose=$("#pvClose"), pane=$("#previewPane");
+  function checkMobile(){ pvToggle.style.display = window.innerWidth<=1100 ? "inline-flex" : "none"; }
+  checkMobile(); window.addEventListener("resize",checkMobile);
+  pvToggle.onclick=function(){ pane.classList.add("show"); postToPreview(); };
+  pvClose.onclick=function(){ pane.classList.remove("show"); };
+
+  // beforeunload warn
+  window.addEventListener("beforeunload",function(e){ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+});
+
+})();
+</script>
+</body>
+</html>

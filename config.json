@@ -1,0 +1,130 @@
+{
+  "brand": {
+    "name": "Ethar Relief Sverige",
+    "tagline": "Remembering the Forgotten",
+    "logoUrl": "",
+    "primary": "#1F4743",
+    "primaryDark": "#14302C",
+    "accent": "#ED6967",
+    "accentDark": "#D85650",
+    "bg": "#F5F5F3"
+  },
+  "nav": {
+    "donateLabel": "Donera",
+    "items": [
+      { "label": "Om Ethar", "target": "om" },
+      { "label": "Turneringen", "target": "turneringen" },
+      { "label": "Anmäl lag", "target": "anmal" },
+      { "label": "Hitta hit", "target": "hittahit" }
+    ]
+  },
+  "hero": {
+    "eyebrow": "Ethar Relief Sverige presenterar",
+    "title": "Ethar Cup 2026",
+    "subtitle": "En fotbollsturnering för välgörenhet — en dag av gemenskap, glädje och givande. Varje lag är med och gör skillnad för människor i Sudan, Etiopien, Somalia och Yemen.",
+    "imageUrl": "",
+    "chips": [
+      { "label": "Datum", "value": "Lördag 15 augusti 2026" },
+      { "label": "Plats", "value": "Kvarnbacka BP, Husby" },
+      { "label": "Avgift", "value": "500 kr/lag" },
+      { "label": "1:a pris", "value": "Pokal + presentkort" },
+      { "label": "Sista anmälan", "value": "1 augusti 2026" }
+    ],
+    "ctaPrimary": { "label": "Anmäl ditt lag", "target": "anmal" },
+    "ctaSecondary": { "label": "Stöd insamlingen", "target": "donera" }
+  },
+  "about": {
+    "title": "Vilka är vi?",
+    "paragraphs": [
+      "Ethar Relief Sverige är en självständig, ideell organisation som bedriver internationellt bistånds- och utvecklingsarbete. Under mottot Remembering the Forgotten arbetar vi för att nå de människor som ofta glöms bort — i Sudan, Etiopien, Somalia och Yemen.",
+      "Vårt arbete handlar om att ge människor möjlighet till ett värdigt liv: rent vatten och vattenbrunnar, utbildning och skolbygge, fadderskap för föräldralösa barn, matpaket, stöd till kvinnor och personer med funktionsvariation samt katastrofhjälp när nöden är som störst.",
+      "Allt vi gör vilar på engagemang och generositet — från månadsgivare, faddrar och volontärer. Den här turneringen är ett sätt för oss att samla lokalsamhället, ha en härlig dag tillsammans och samtidigt samla in medel till våra projekt."
+    ],
+    "linkText": "Läs mer om vårt arbete på etharreliefsverige.se",
+    "linkUrl": "https://www.etharreliefsverige.se/",
+    "focusAreas": [
+      { "icon": "water", "label": "Vatten" },
+      { "icon": "school", "label": "Utbildning & skolor" },
+      { "icon": "heart", "label": "Fadderskap" },
+      { "icon": "food", "label": "Matpaket" },
+      { "icon": "women", "label": "Kvinnoprojekt" },
+      { "icon": "aid", "label": "Katastrofhjälp" }
+    ]
+  },
+  "social": {
+    "title": "En folkfest för välgörenhet",
+    "paragraphs": [
+      "Det här är inte första gången. Sommaren 2024 bjöd Ethar Relief Sverige in lag från hela Stockholmsområdet till en välgörenhetsturnering på Kvarnbacka BP i Husby. Tolv lag anmälde sig, fördelade på fyra grupper, och trots blåsigt väder kom publiken i massor — det blev en riktig folkfest. Vid sidan av planen fanns ansiktsmålning, spel och aktiviteter för barnen och en food truck på plats. Finalen mellan FC Samuraj och Jakan slutade 2–1.",
+      "Arrangörerna konstaterade efteråt att ingen i organisationen är expert på att arrangera fotbollsturneringar — men att man tillsammans med lokala föreningar lyckades skapa en fin turnering som många kunde ta del av. Nu gör vi det igen, och vill ha med dig."
+    ],
+    "stats": [
+      { "value": "12", "label": "lag" },
+      { "value": "4", "label": "grupper" },
+      { "value": "2–1", "label": "i finalen" }
+    ],
+    "press": {
+      "kicker": "I pressen",
+      "title": "Nyhetsbyrån Järva skrev om turneringen 2024",
+      "linkText": "Läs artikeln",
+      "linkUrl": "https://www.nyhetsbyranjarva.se/fotbollsturnering-for-valgorenhet/"
+    },
+    "instagram": [
+      { "url": "https://www.instagram.com/p/DMIUlujI0Ue/", "caption": "Höjdpunkter från speldagen" },
+      { "url": "https://www.instagram.com/p/DMZwj5voT07/", "caption": "Stämning vid sidan av planen" },
+      { "url": "https://www.instagram.com/p/DM_U0Iwon1z/", "caption": "Finalen och prisutdelningen" }
+    ]
+  },
+  "format": {
+    "title": "Så går turneringen till",
+    "items": [
+      { "label": "Format", "value": "5 mot 5" },
+      { "label": "Ålder", "value": "15+" },
+      { "label": "Lagstorlek", "value": "Max 6 spelare" },
+      { "label": "Matchtid", "value": "2 × 15 min" },
+      { "label": "Anmälningsavgift", "value": "500 kr/lag" },
+      { "label": "1:a pris", "value": "Pokal + presentkort" },
+      { "label": "Antal platser", "value": "16 lag" },
+      { "label": "Sista anmälningsdag", "value": "1 augusti 2026" }
+    ],
+    "note": "Anmälan är bindande efter bekräftad plats. Anmälningsavgiften går oavkortat till Ethar Relief Sveriges projekt."
+  },
+  "teamForm": {
+    "title": "Anmäl ditt lag",
+    "intro": "Fyll i formuläret nedan så hör vi av oss med bekräftelse och betalningsinformation. Antalet platser är begränsat — först till kvarn.",
+    "fallbackEmail": "info@etharreliefsverige.se",
+    "successTitle": "Tack för din anmälan!",
+    "successText": "Vi har tagit emot din laganmälan och återkommer med bekräftelse och betalningsinformation så snart vi kan."
+  },
+  "findus": {
+    "title": "Hitta hit",
+    "items": [
+      { "label": "Datum", "value": "Lördag 15 augusti 2026" },
+      { "label": "Tid", "value": "Kl. 10.00 – 17.00" },
+      { "label": "Plats", "value": "Kvarnbacka BP, Husby, Stockholm" },
+      { "label": "Kollektivtrafik", "value": "Tunnelbana till Husby (blå linjen), ca 8 min promenad" },
+      { "label": "Kontakt", "value": "info@etharreliefsverige.se · 08-000 00 00" }
+    ],
+    "mapsQuery": "Kvarnbacka BP, Husby, Stockholm",
+    "mapsLabel": "Öppna i Maps"
+  },
+  "donate": {
+    "title": "Vill du bidra direkt?",
+    "intro": "Varje krona går till Ethar Relief Sveriges projekt. Stöd insamlingen även om du inte spelar.",
+    "swish": "123 061 35 05",
+    "plusgiro": "60 89 35-3",
+    "swishUrl": "https://app.swish.nu/1/p/sw/?sw=1230613505",
+    "message": "Märk din gåva med \"Ethar Cup 2026\"."
+  },
+  "footer": {
+    "socials": [
+      { "label": "Instagram", "url": "https://www.instagram.com/etharreliefsverige/" },
+      { "label": "Facebook", "url": "https://www.facebook.com/etharreliefsverige" },
+      { "label": "YouTube", "url": "https://www.youtube.com/c/EtharRelief" }
+    ],
+    "copyright": "© 2026 Ethar Relief Sverige · Remembering the Forgotten."
+  },
+  "settings": {
+    "formEndpoint": "",
+    "adminPassword": "ethar2026"
+  }
+}
