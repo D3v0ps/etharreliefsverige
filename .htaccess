@@ -1,0 +1,13 @@
+# Ethar Cup — statisk undermapp.
+# Ligger bredvid WordPress och påverkar inte huvudsidan: WordPress
+# rewrite-regler i rotmappen rör bara förfrågningar som INTE matchar en
+# riktig fil/mapp (!-f / !-d), så den här mappens filer serveras som de är.
+
+# Visa index.html när man besöker mappen (t.ex. /cup/).
+DirectoryIndex index.html
+
+# Stäng av URL-omskrivning lokalt i den här mappen (behövs inte för statiska
+# filer, och hindrar att eventuella ärvda regler stör). PHP körs ändå normalt.
+<IfModule mod_rewrite.c>
+  RewriteEngine Off
+</IfModule>

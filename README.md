@@ -8,6 +8,27 @@
 
 Ladda upp **alla** filer till samma mapp på webbhotellet (t.ex. One.com).
 
+## Lägga upp på one.com bredvid WordPress (undermapp)
+Sidan är helt statisk och alla länkar är relativa, så den kan ligga i valfri
+undermapp utan ändringar — t.ex. `etharreliefsverige.se/cup/`.
+
+**Påverkar det WordPress?** Nej. WordPress `.htaccess` i rotmappen skriver bara om
+adresser som *inte* matchar en riktig fil eller mapp (`!-f` / `!-d`). En riktig
+undermapp med statiska filer serveras därför direkt, förbi WordPress —
+`wp-content`, `wp-config.php` och databasen rörs inte.
+
+1. Anslut via one.coms filhanterare eller SFTP.
+2. Gå till samma mapp där WordPress-filerna ligger (`index.php`, `wp-admin`, `wp-content` …).
+3. Skapa en mapp, t.ex. `cup`.
+4. Ladda upp `index.html`, `styles.css`, `app.js`, `admin.html`, `config.json` och `.htaccess` dit.
+5. Öppna `https://etharreliefsverige.se/cup/` (admin: `…/cup/admin.html`).
+
+Den medföljande `.htaccess` sätter `index.html` som startsida och stänger av
+URL-omskrivning lokalt i mappen. Välj ett mappnamn som inte krockar med en
+befintlig WordPress-sida med samma slug (en riktig mapp tar över den adressen).
+För ännu tightare isolering går det att skapa en subdomän
+(`cup.etharreliefsverige.se`) som pekar på mappen.
+
 ## Så redigerar ni innehållet
 1. Gå till `eradoman.se/admin.html`.
 2. Logga in (standardlösenord: **ethar2026** — byt det under fliken *Inställningar*).
