@@ -142,6 +142,12 @@ a{color:var(--primary);}
 .pay-chk input:checked+span{background:var(--primary);border-color:var(--primary);}
 .pay-chk input:checked+span::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
 .pay-chk input:disabled+span{opacity:.5;}
+.pay-login{max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;}
+.pay-login label{display:block;font-family:var(--font-head);font-weight:700;font-size:.9rem;color:var(--primary);margin-bottom:4px;}
+.pay-login-hint{font-size:.8rem;color:var(--muted);margin:0 0 14px;}
+.pay-login input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font-size:.95rem;}
+.pay-login input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.1);}
+.pay-login .act-primary{color:#fff;}
 </style>
 </head>
 <body>
@@ -292,10 +298,8 @@ var config=null, published=null, activeSection="brand", dirty=false, postTimer=n
 
 /* ---- payments view ---- */
 var PAY_SECTION="_payments";
-/* Token för betalningsvyn — MÅSTE vara samma som ADMIN_TOKEN i
-   backend/google-apps-script.gs. Byt gärna till ett eget hemligt värde. */
-var PAY_TOKEN="ec-2026-9f3a7c";
-var jsonpId=0;
+var PAY_API="api.php";              /* server-side proxy (samma mapp) — token & lösenord ligger där, inte här */
+var PAY_PASS_KEY="etharPayPass_v1"; /* betalningslösenordet sparas i sessionStorage under sessionen */
 
 /* ---- helpers ---- */
 function $(s){return document.querySelector(s);}
@@ -491,40 +495,53 @@ function showApp(){
 }
 
 /* ===================== Betalningar (anmälningar) ===================== */
-function payEndpoint(){
-  return (config&&config.settings&&config.settings.formEndpoint) ||
-         (published&&published.settings&&published.settings.formEndpoint) || "";
+function payPass(){ try{ return sessionStorage.getItem(PAY_PASS_KEY)||""; }catch(e){ return ""; } }
+function setPayPass(v){ try{ if(v) sessionStorage.setItem(PAY_PASS_KEY,v); else sessionStorage.removeItem(PAY_PASS_KEY); }catch(e){} }
+/* POST till api.php (samma origin). Lösenordet skickas med; token & verifiering sker server-side. */
+function payApi(params,onOk,onErr){
+  params.pass=payPass();
+  var body=[]; for(var k in params){ body.push(encodeURIComponent(k)+"="+encodeURIComponent(params[k])); }
+  fetch(PAY_API,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.join("&")})
+    .then(function(r){ return r.text().then(function(t){ var j=null; try{j=JSON.parse(t);}catch(e){} return {status:r.status,json:j}; }); })
+    .then(onOk).catch(function(){ if(onErr)onErr(); });
 }
 function renderPayments(){
-  var ep=payEndpoint();
   var html='<div class="editor-head"><h2>Betalningar</h2>'+
-    '<p>Anmälda lag och betalstatus. Bocka av när betalningen kommit in (Swish/Plusgiro) — det sparas direkt i kalkylarket.</p></div>';
-  if(!ep){
-    html+='<div class="note"><b>Ingen endpoint.</b> Sätt Apps Script-URL:en under <b>Inställningar → Formulär-endpoint</b> och publicera först.</div>';
-    $("#editor").innerHTML=html; return;
-  }
-  html+='<div class="pay-bar"><div class="pay-summary" id="paySummary">Laddar…</div>'+
-    '<button class="act-mini" id="payRefresh">↻ Uppdatera</button></div>'+
+    '<p>Anmälda lag och betalstatus. Bocka av när betalningen kommit in (Swish/Plusgiro) — det sparas direkt i kalkylarket.</p></div>'+
+    '<div class="pay-bar"><div class="pay-summary" id="paySummary"></div>'+
+    '<button class="act-mini" id="payRefresh" type="button">↻ Uppdatera</button></div>'+
     '<div id="payBody"></div>';
   $("#editor").innerHTML=html;
   $("#payRefresh").onclick=loadPayments;
-  loadPayments();
+  if(payPass()) loadPayments(); else showPayLogin();
+}
+function showPayLogin(msg){
+  $("#paySummary").textContent="";
+  $("#payBody").innerHTML='<form id="payLoginForm" class="pay-login">'+
+    '<label>Lösenord för betalningar</label>'+
+    '<p class="pay-login-hint">Skyddar anmälningslistan (personuppgifter). Sätts i <code>api.php</code> på servern.</p>'+
+    (msg?'<div class="note pay-err" style="margin:0 0 12px"><b>'+escHtml(msg)+'</b></div>':'')+
+    '<input type="password" id="payPw" autocomplete="off" placeholder="Lösenord">'+
+    '<button type="submit" class="act act-primary" style="margin-top:10px;width:auto">Lås upp</button>'+
+  '</form>';
+  $("#payLoginForm").onsubmit=function(e){ e.preventDefault(); var v=$("#payPw").value; if(!v)return; setPayPass(v); loadPayments(); };
+  var pw=$("#payPw"); if(pw) pw.focus();
 }
 function loadPayments(){
-  var ep=payEndpoint(); if(!ep) return;
   $("#paySummary").textContent="Laddar…";
   $("#payBody").innerHTML='<div class="pay-msg">Hämtar anmälningar…</div>';
-  jsonp(ep,{action:"list",token:PAY_TOKEN},function(resp){
-    if(!resp||!resp.ok){
+  payApi({action:"list"},function(res){
+    if(res.status===401){ setPayPass(""); showPayLogin("Fel lösenord. Försök igen."); return; }
+    if(!res.json||!res.json.ok){
       $("#paySummary").textContent="";
       $("#payBody").innerHTML='<div class="note pay-err"><b>Kunde inte hämta listan'+
-        (resp&&resp.error?(' ('+escHtml(resp.error)+')'):'')+'.</b> Kontrollera att Apps Script-koden är den uppdaterade (med <code>list</code>/<code>setPaid</code>), att en ny version är distribuerad, och att token stämmer.</div>';
+        (res.json&&res.json.error?(' ('+escHtml(res.json.error)+')'):(' (HTTP '+res.status+')'))+'.</b> Är <code>api.php</code> uppladdad och rätt ifylld, och Apps Script distribuerad i ny version?</div>';
       return;
     }
-    renderPayTable(resp.registrations||[]);
+    renderPayTable(res.json.registrations||[]);
   },function(){
     $("#paySummary").textContent="";
-    $("#payBody").innerHTML='<div class="note pay-err"><b>Nätverksfel vid hämtning.</b> Är Apps Script-appen distribuerad för <b>Alla</b>?</div>';
+    $("#payBody").innerHTML='<div class="note pay-err"><b>Nätverksfel.</b> Nås <code>api.php</code> i samma mapp? (Lokalt via <code>file://</code> fungerar det inte.)</div>';
   });
 }
 function renderPayTable(list){
@@ -557,11 +574,11 @@ function updatePaySummary(){
   $("#paySummary").innerHTML='<b>'+total+'</b> anmälda · <b>'+paid+'</b> betalda · <b>'+(total-paid)+'</b> kvar';
 }
 function markPaid(row,paid,cb){
-  var ep=payEndpoint(); if(!ep) return;
   cb.disabled=true;
-  jsonp(ep,{action:"setPaid",token:PAY_TOKEN,row:row,paid:paid?"1":"0"},function(resp){
+  payApi({action:"setPaid",row:row,paid:paid?"1":"0"},function(res){
     cb.disabled=false;
-    if(!resp||!resp.ok){ cb.checked=!paid; toast("Kunde inte spara — försök igen."); return; }
+    if(res.status===401){ setPayPass(""); cb.checked=!paid; showPayLogin("Ange lösenordet igen."); return; }
+    if(!res.json||!res.json.ok){ cb.checked=!paid; toast("Kunde inte spara — försök igen."); return; }
     updatePaySummary();
     toast(paid?"Markerad som betald.":"Markerad som ej betald.");
   },function(){ cb.disabled=false; cb.checked=!paid; toast("Nätverksfel — försök igen."); });
@@ -578,18 +595,7 @@ function payDate(v){
   function p(n){return (n<10?"0":"")+n;}
   return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
 }
-/* JSONP — Apps Script skickar inga CORS-headers, så vi läser svaret via <script>. */
-function jsonp(url,params,onOk,onErr){
-  var cb="__etharJsonp_"+(jsonpId++);
-  var s=document.createElement("script"), done=false;
-  function cleanup(){ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); clearTimeout(timer); }
-  var timer=setTimeout(function(){ if(done)return; done=true; cleanup(); if(onErr)onErr(); },12000);
-  window[cb]=function(data){ if(done)return; done=true; cleanup(); if(onOk)onOk(data); };
-  var qs=[]; for(var k in params){ qs.push(encodeURIComponent(k)+"="+encodeURIComponent(params[k])); }
-  s.src=url+(url.indexOf("?")>-1?"&":"?")+qs.join("&")+"&callback="+cb;
-  s.onerror=function(){ if(done)return; done=true; cleanup(); if(onErr)onErr(); };
-  document.body.appendChild(s);
-}
+/* (JSONP borttagen — betalningsvyn använder nu api.php via fetch.) */
 
 /* ---- preview ready handshake ---- */
 window.addEventListener("message",function(ev){

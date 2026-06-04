@@ -7,6 +7,7 @@
 - **styles.css**, **app.js** — design och funktionalitet för den publika sidan.
 - **.htaccess** — sätter startsida + snygg admin-adress i mappen.
 - **backend/google-apps-script.gs** — kod för anmälnings-backend (klistras in i Google Apps Script; laddas *inte* upp till webbhotellet).
+- **api.php** — server-side proxy för betalningsvyn (token + lösenord ligger här, inte i klienten).
 
 Ladda upp den publika sidans filer till samma mapp på webbhotellet (t.ex. One.com):
 `index.html`, `styles.css`, `app.js`, `admin.html`, `config.json`, `.htaccess`.
@@ -66,12 +67,20 @@ Detaljer:
 Adminportalen har fliken **Betalningar** som listar alla anmälda lag (från Google
 Sheet) och låter er bocka av **Betald** per lag — det sparas direkt i arket.
 
-För att det ska fungera:
-1. Använd den uppdaterade koden i `backend/google-apps-script.gs` (den har `list` + `setPaid`) och **distribuera en ny version** av webbappen.
-2. Tokenen måste matcha: `ADMIN_TOKEN` i `google-apps-script.gs` = `PAY_TOKEN` överst i `admin.html`. Byt gärna båda till ett eget hemligt värde.
-3. Öppna admin → **Betalningar** → bocka av betalda lag. En liten summering visar *anmälda / betalda / kvar*.
+Anropen går via **`api.php`** på servern (samma mapp), inte direkt från webbläsaren.
+Det gör att Apps Script-token och betalningslösenordet bara finns på servern och
+aldrig i någon fil som besökare kan läsa. PHP krävs (finns på one.com).
 
-> **Skyddsnivå (vald):** tokenen ligger i `admin.html`, så den som kan öppna admin-sidans källkod kan i teorin läsa anmälningslistan — samma "obscurity"-nivå som admin-lösenordet. Vill ni skydda personuppgifterna hårdare kan listan flyttas bakom en liten `api.php` på servern (token + lösenord server-side); säg till så fixar vi det.
+**Setup:**
+1. Ladda upp `api.php` till samma mapp (`turnering`) som resten av filerna.
+2. Öppna `api.php` och sätt de tre värdena högst upp:
+   - `$APPS_SCRIPT_URL` — er `/exec`-URL.
+   - `$APPS_SCRIPT_TOKEN` — **samma** värde som `ADMIN_TOKEN` i `backend/google-apps-script.gs`.
+   - `$ADMIN_PASSWORD` — ett eget, starkt lösenord (ligger bara på servern).
+3. Använd den uppdaterade `backend/google-apps-script.gs` och distribuera en **ny version** av webbappen.
+4. Öppna admin → **Betalningar**, ange betalningslösenordet (samma som `$ADMIN_PASSWORD`), och bocka av betalda lag.
+
+> **Skydd:** token och lösenord ligger server-side i `api.php` (PHP exekveras, källkoden visas aldrig för besökare). Personuppgifterna lämnas bara ut efter rätt lösenord, och själva adminsidan innehåller inga hemligheter längre.
 
 ## Att fylla i (riktiga uppgifter)
 Allt nedan ändras i adminportalen:
