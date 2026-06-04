@@ -112,6 +112,36 @@ a{color:var(--primary);}
 .note b{color:var(--accent-dark);}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--primary);color:#fff;padding:14px 22px;border-radius:12px;font-weight:600;font-size:.92rem;box-shadow:0 12px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:.3s;z-index:90;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---- payments view ---- */
+.nav-sep{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:14px 14px 6px;}
+.sidenav button.paynav .num{background:var(--accent);color:#fff;font-size:.6rem;font-weight:800;}
+.sidenav button.paynav.active .num{background:rgba(255,255,255,.25);color:#fff;}
+.pay-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.pay-summary{font-size:.95rem;color:var(--ink);}
+.pay-summary b{font-family:var(--font-head);color:var(--primary);}
+.act-mini{background:var(--surface);border:1.5px solid var(--line);border-radius:8px;padding:8px 13px;font-weight:700;font-size:.85rem;color:var(--primary);}
+.act-mini:hover{border-color:var(--primary);background:#f4f8f5;}
+.pay-msg{padding:26px;text-align:center;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:12px;}
+.note.pay-err{background:#fdecec;border-color:#f3b4b4;color:#9b2222;}
+.note.pay-err b{color:#9b2222;}
+.note.pay-err code{background:rgba(155,34,34,.1);padding:.05em .35em;border-radius:4px;}
+.pay-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:.9rem;}
+.pay-table th{font-family:var(--font-head);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:12px 14px;border-bottom:2px solid var(--line);background:#f6f8f6;}
+.pay-table td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;}
+.pay-table tr:last-child td{border-bottom:0;}
+.pay-table tbody tr:hover{background:#f5f8f5;}
+.pay-c{text-align:center;width:1%;white-space:nowrap;}
+.pay-team{font-weight:700;color:var(--primary);}
+.pay-contact a{color:var(--primary);text-decoration:none;}
+.pay-contact a:hover{text-decoration:underline;}
+.pay-when{color:var(--muted);font-size:.82rem;white-space:nowrap;}
+.pay-chk{position:relative;display:inline-block;width:22px;height:22px;cursor:pointer;}
+.pay-chk input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;}
+.pay-chk span{position:absolute;inset:0;border-radius:6px;border:2px solid var(--line);transition:.15s;}
+.pay-chk input:checked+span{background:var(--primary);border-color:var(--primary);}
+.pay-chk input:checked+span::after{content:"";position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);}
+.pay-chk input:disabled+span{opacity:.5;}
 </style>
 </head>
 <body>
@@ -260,6 +290,13 @@ var DRAFT_KEY="etharCupDraft_v1";
 var AUTH_KEY="etharCupAuth_v1";
 var config=null, published=null, activeSection="brand", dirty=false, postTimer=null;
 
+/* ---- payments view ---- */
+var PAY_SECTION="_payments";
+/* Token för betalningsvyn — MÅSTE vara samma som ADMIN_TOKEN i
+   backend/google-apps-script.gs. Byt gärna till ett eget hemligt värde. */
+var PAY_TOKEN="ec-2026-9f3a7c";
+var jsonpId=0;
+
 /* ---- helpers ---- */
 function $(s){return document.querySelector(s);}
 function getPath(obj,path){ if(!path) return obj; return path.split(".").reduce(function(o,k){return o==null?undefined:o[k];},obj); }
@@ -282,7 +319,9 @@ function loadConfig(){
 
 /* ---- render side nav ---- */
 function renderNav(){
-  $("#sidenav").innerHTML = SCHEMA.map(function(s,i){
+  var payBtn='<button data-sec="'+PAY_SECTION+'" class="paynav '+(activeSection===PAY_SECTION?"active":"")+'">'+
+    '<span class="num">kr</span>Betalningar</button><div class="nav-sep">Innehåll</div>';
+  $("#sidenav").innerHTML = payBtn + SCHEMA.map(function(s,i){
     return '<button data-sec="'+s.key+'" class="'+(s.key===activeSection?"active":"")+'">'+
       '<span class="num">'+(i+1)+'</span>'+s.label+'</button>';
   }).join("");
@@ -293,6 +332,7 @@ function renderNav(){
 
 /* ---- render editor for active section ---- */
 function renderEditor(){
+  if(activeSection===PAY_SECTION){ renderPayments(); return; }
   var sec=SCHEMA.filter(function(s){return s.key===activeSection;})[0];
   var secData=config[sec.key]; if(secData==null){secData={};config[sec.key]=secData;}
   var html='<div class="editor-head"><h2>'+sec.label+'</h2><p>'+sec.desc+'</p></div>';
@@ -448,6 +488,107 @@ function showApp(){
   $("#gate").style.display="none";
   $("#app").classList.add("on");
   renderNav(); renderEditor(); updateSavedDot();
+}
+
+/* ===================== Betalningar (anmälningar) ===================== */
+function payEndpoint(){
+  return (config&&config.settings&&config.settings.formEndpoint) ||
+         (published&&published.settings&&published.settings.formEndpoint) || "";
+}
+function renderPayments(){
+  var ep=payEndpoint();
+  var html='<div class="editor-head"><h2>Betalningar</h2>'+
+    '<p>Anmälda lag och betalstatus. Bocka av när betalningen kommit in (Swish/Plusgiro) — det sparas direkt i kalkylarket.</p></div>';
+  if(!ep){
+    html+='<div class="note"><b>Ingen endpoint.</b> Sätt Apps Script-URL:en under <b>Inställningar → Formulär-endpoint</b> och publicera först.</div>';
+    $("#editor").innerHTML=html; return;
+  }
+  html+='<div class="pay-bar"><div class="pay-summary" id="paySummary">Laddar…</div>'+
+    '<button class="act-mini" id="payRefresh">↻ Uppdatera</button></div>'+
+    '<div id="payBody"></div>';
+  $("#editor").innerHTML=html;
+  $("#payRefresh").onclick=loadPayments;
+  loadPayments();
+}
+function loadPayments(){
+  var ep=payEndpoint(); if(!ep) return;
+  $("#paySummary").textContent="Laddar…";
+  $("#payBody").innerHTML='<div class="pay-msg">Hämtar anmälningar…</div>';
+  jsonp(ep,{action:"list",token:PAY_TOKEN},function(resp){
+    if(!resp||!resp.ok){
+      $("#paySummary").textContent="";
+      $("#payBody").innerHTML='<div class="note pay-err"><b>Kunde inte hämta listan'+
+        (resp&&resp.error?(' ('+escHtml(resp.error)+')'):'')+'.</b> Kontrollera att Apps Script-koden är den uppdaterade (med <code>list</code>/<code>setPaid</code>), att en ny version är distribuerad, och att token stämmer.</div>';
+      return;
+    }
+    renderPayTable(resp.registrations||[]);
+  },function(){
+    $("#paySummary").textContent="";
+    $("#payBody").innerHTML='<div class="note pay-err"><b>Nätverksfel vid hämtning.</b> Är Apps Script-appen distribuerad för <b>Alla</b>?</div>';
+  });
+}
+function renderPayTable(list){
+  if(!list.length){
+    $("#paySummary").innerHTML='<b>0</b> anmälda';
+    $("#payBody").innerHTML='<div class="pay-msg">Inga anmälningar än.</div>'; return;
+  }
+  var rows=list.map(function(r){
+    return '<tr>'+
+      '<td class="pay-c"><label class="pay-chk"><input type="checkbox" '+(r.betald?'checked':'')+' data-row="'+escAttr(r.row)+'"><span></span></label></td>'+
+      '<td class="pay-team">'+escHtml(r.lagnamn||"—")+'</td>'+
+      '<td>'+escHtml(r.kontakt||"")+'</td>'+
+      '<td class="pay-contact">'+payContact(r)+'</td>'+
+      '<td class="pay-c">'+escHtml(r.antal||"")+'</td>'+
+      '<td class="pay-when">'+escHtml(payDate(r.tid))+'</td>'+
+    '</tr>';
+  }).join("");
+  $("#payBody").innerHTML='<table class="pay-table"><thead><tr>'+
+    '<th class="pay-c">Betald</th><th>Lag</th><th>Kontakt</th><th>E-post / Telefon</th><th class="pay-c">Antal</th><th>Anmäld</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>';
+  $("#payBody").querySelectorAll("input[data-row]").forEach(function(cb){
+    cb.onchange=function(){ markPaid(cb.getAttribute("data-row"),cb.checked,cb); };
+  });
+  updatePaySummary();
+}
+function updatePaySummary(){
+  var cbs=$("#payBody").querySelectorAll("input[data-row]");
+  var total=cbs.length,paid=0;
+  cbs.forEach(function(c){ if(c.checked)paid++; });
+  $("#paySummary").innerHTML='<b>'+total+'</b> anmälda · <b>'+paid+'</b> betalda · <b>'+(total-paid)+'</b> kvar';
+}
+function markPaid(row,paid,cb){
+  var ep=payEndpoint(); if(!ep) return;
+  cb.disabled=true;
+  jsonp(ep,{action:"setPaid",token:PAY_TOKEN,row:row,paid:paid?"1":"0"},function(resp){
+    cb.disabled=false;
+    if(!resp||!resp.ok){ cb.checked=!paid; toast("Kunde inte spara — försök igen."); return; }
+    updatePaySummary();
+    toast(paid?"Markerad som betald.":"Markerad som ej betald.");
+  },function(){ cb.disabled=false; cb.checked=!paid; toast("Nätverksfel — försök igen."); });
+}
+function payContact(r){
+  var out=[];
+  if(r.epost) out.push('<a href="mailto:'+escAttr(r.epost)+'">'+escHtml(r.epost)+'</a>');
+  if(r.telefon) out.push('<a href="tel:'+escAttr(String(r.telefon).replace(/\s+/g,""))+'">'+escHtml(r.telefon)+'</a>');
+  return out.join('<br>');
+}
+function payDate(v){
+  if(!v) return "";
+  var d=new Date(v); if(isNaN(d.getTime())) return String(v);
+  function p(n){return (n<10?"0":"")+n;}
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+/* JSONP — Apps Script skickar inga CORS-headers, så vi läser svaret via <script>. */
+function jsonp(url,params,onOk,onErr){
+  var cb="__etharJsonp_"+(jsonpId++);
+  var s=document.createElement("script"), done=false;
+  function cleanup(){ try{delete window[cb];}catch(e){window[cb]=undefined;} if(s.parentNode)s.parentNode.removeChild(s); clearTimeout(timer); }
+  var timer=setTimeout(function(){ if(done)return; done=true; cleanup(); if(onErr)onErr(); },12000);
+  window[cb]=function(data){ if(done)return; done=true; cleanup(); if(onOk)onOk(data); };
+  var qs=[]; for(var k in params){ qs.push(encodeURIComponent(k)+"="+encodeURIComponent(params[k])); }
+  s.src=url+(url.indexOf("?")>-1?"&":"?")+qs.join("&")+"&callback="+cb;
+  s.onerror=function(){ if(done)return; done=true; cleanup(); if(onErr)onErr(); };
+  document.body.appendChild(s);
 }
 
 /* ---- preview ready handshake ---- */

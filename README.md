@@ -62,6 +62,17 @@ Detaljer:
 - Fungerar inte JavaScript får besökaren en länk att mejla anmälan istället.
 - Ändrar ni `.gs`-koden: distribuera en **ny version** (URL:en förblir densamma).
 
+## Betalningar (markera betalda i admin)
+Adminportalen har fliken **Betalningar** som listar alla anmälda lag (från Google
+Sheet) och låter er bocka av **Betald** per lag — det sparas direkt i arket.
+
+För att det ska fungera:
+1. Använd den uppdaterade koden i `backend/google-apps-script.gs` (den har `list` + `setPaid`) och **distribuera en ny version** av webbappen.
+2. Tokenen måste matcha: `ADMIN_TOKEN` i `google-apps-script.gs` = `PAY_TOKEN` överst i `admin.html`. Byt gärna båda till ett eget hemligt värde.
+3. Öppna admin → **Betalningar** → bocka av betalda lag. En liten summering visar *anmälda / betalda / kvar*.
+
+> **Skyddsnivå (vald):** tokenen ligger i `admin.html`, så den som kan öppna admin-sidans källkod kan i teorin läsa anmälningslistan — samma "obscurity"-nivå som admin-lösenordet. Vill ni skydda personuppgifterna hårdare kan listan flyttas bakom en liten `api.php` på servern (token + lösenord server-side); säg till så fixar vi det.
+
 ## Att fylla i (riktiga uppgifter)
 Allt nedan ändras i adminportalen:
 - Datum, tid, plats/adress, kollektivtrafik
