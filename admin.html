@@ -148,6 +148,11 @@ a{color:var(--primary);}
 .pay-login input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font-size:.95rem;}
 .pay-login input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.1);}
 .pay-login .act-primary{color:#fff;}
+.reg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.reg-table td{font-size:.86rem;}
+.reg-msg{max-width:280px;color:var(--muted);font-size:.82rem;white-space:pre-wrap;}
+.reg-paid{display:inline-block;font-weight:700;font-size:.78rem;color:#1d7a45;background:#e2f0e6;border-radius:6px;padding:2px 8px;}
+.reg-unpaid{display:inline-block;font-weight:700;font-size:.78rem;color:#9b5b00;background:#fbe6cf;border-radius:6px;padding:2px 8px;}
 </style>
 </head>
 <body>
@@ -303,6 +308,7 @@ var config=null, published=null, activeSection="brand", dirty=false, postTimer=n
 
 /* ---- payments view ---- */
 var PAY_SECTION="_payments";
+var REG_SECTION="_registrations";
 var PAY_API=BASE+"api.php";         /* server-side proxy — token & lösenord ligger där, inte i klienten */
 var PAY_PASS_KEY="etharPayPass_v1"; /* betalningslösenordet sparas i sessionStorage under sessionen */
 
@@ -328,9 +334,11 @@ function loadConfig(){
 
 /* ---- render side nav ---- */
 function renderNav(){
-  var payBtn='<button data-sec="'+PAY_SECTION+'" class="paynav '+(activeSection===PAY_SECTION?"active":"")+'">'+
-    '<span class="num">kr</span>Betalningar</button><div class="nav-sep">Innehåll</div>';
-  $("#sidenav").innerHTML = payBtn + SCHEMA.map(function(s,i){
+  var dataBtns='<div class="nav-sep">Data</div>'+
+    '<button data-sec="'+REG_SECTION+'" class="paynav '+(activeSection===REG_SECTION?"active":"")+'"><span class="num">≡</span>Anmälningar</button>'+
+    '<button data-sec="'+PAY_SECTION+'" class="paynav '+(activeSection===PAY_SECTION?"active":"")+'"><span class="num">kr</span>Betalningar</button>'+
+    '<div class="nav-sep">Innehåll</div>';
+  $("#sidenav").innerHTML = dataBtns + SCHEMA.map(function(s,i){
     return '<button data-sec="'+s.key+'" class="'+(s.key===activeSection?"active":"")+'">'+
       '<span class="num">'+(i+1)+'</span>'+s.label+'</button>';
   }).join("");
@@ -341,6 +349,7 @@ function renderNav(){
 
 /* ---- render editor for active section ---- */
 function renderEditor(){
+  if(activeSection===REG_SECTION){ renderRegistrations(); return; }
   if(activeSection===PAY_SECTION){ renderPayments(); return; }
   var sec=SCHEMA.filter(function(s){return s.key===activeSection;})[0];
   var secData=config[sec.key]; if(secData==null){secData={};config[sec.key]=secData;}
@@ -520,16 +529,19 @@ function renderPayments(){
   $("#payRefresh").onclick=loadPayments;
   if(payPass()) loadPayments(); else showPayLogin();
 }
+function dataEls(){ return activeSection===REG_SECTION ? {sum:"#regSummary",body:"#regBody"} : {sum:"#paySummary",body:"#payBody"}; }
+function loadActiveData(){ if(activeSection===REG_SECTION) loadRegistrations(); else loadPayments(); }
 function showPayLogin(msg){
-  $("#paySummary").textContent="";
-  $("#payBody").innerHTML='<form id="payLoginForm" class="pay-login">'+
+  var e=dataEls();
+  $(e.sum).textContent="";
+  $(e.body).innerHTML='<form id="payLoginForm" class="pay-login">'+
     '<label>Lösenord för betalningar</label>'+
     '<p class="pay-login-hint">Skyddar anmälningslistan (personuppgifter). Sätts i <code>api.php</code> på servern.</p>'+
     (msg?'<div class="note pay-err" style="margin:0 0 12px"><b>'+escHtml(msg)+'</b></div>':'')+
     '<input type="password" id="payPw" autocomplete="off" placeholder="Lösenord">'+
     '<button type="submit" class="act act-primary" style="margin-top:10px;width:auto">Lås upp</button>'+
   '</form>';
-  $("#payLoginForm").onsubmit=function(e){ e.preventDefault(); var v=$("#payPw").value; if(!v)return; setPayPass(v); loadPayments(); };
+  $("#payLoginForm").onsubmit=function(ev){ ev.preventDefault(); var v=$("#payPw").value; if(!v)return; setPayPass(v); loadActiveData(); };
   var pw=$("#payPw"); if(pw) pw.focus();
 }
 function loadPayments(){
@@ -599,6 +611,90 @@ function payDate(v){
   var d=new Date(v); if(isNaN(d.getTime())) return String(v);
   function p(n){return (n<10?"0":"")+n;}
   return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+
+/* ===================== Anmälningar (läs-vy + export) ===================== */
+var REG_DATA=[];
+var REG_COLS=["Lag","Kontakt","E-post","Telefon","Antal","Meddelande","Anmäld","Betald"];
+function renderRegistrations(){
+  var html='<div class="editor-head"><h2>Anmälningar</h2>'+
+    '<p>Alla inkomna laganmälningar från kalkylarket (läs-vy). För att bocka av betalningar, använd fliken Betalningar.</p></div>'+
+    '<div class="pay-bar"><div class="pay-summary" id="regSummary"></div>'+
+    '<div class="reg-actions">'+
+      '<button class="act-mini" id="regRefresh" type="button">↻ Uppdatera</button>'+
+      '<button class="act-mini" id="regCsv" type="button">⬇ CSV</button>'+
+      '<button class="act-mini" id="regPrint" type="button">🖨 Skriv ut</button>'+
+    '</div></div><div id="regBody"></div>';
+  $("#editor").innerHTML=html;
+  $("#regRefresh").onclick=loadRegistrations;
+  $("#regCsv").onclick=exportRegCsv;
+  $("#regPrint").onclick=printReg;
+  if(payPass()) loadRegistrations(); else showPayLogin();
+}
+function loadRegistrations(){
+  $("#regSummary").textContent="Laddar…";
+  $("#regBody").innerHTML='<div class="pay-msg">Hämtar anmälningar…</div>';
+  payApi({action:"list"},function(res){
+    if(res.status===401){ setPayPass(""); showPayLogin("Fel lösenord. Försök igen."); return; }
+    if(!res.json||!res.json.ok){
+      $("#regSummary").textContent="";
+      $("#regBody").innerHTML='<div class="note pay-err"><b>Kunde inte hämta listan'+(res.json&&res.json.error?(' ('+escHtml(res.json.error)+')'):(' (HTTP '+res.status+')'))+'.</b> Kontrollera <code>api.php</code> och att Apps Script är distribuerad i ny version.</div>';
+      return;
+    }
+    renderRegTable(res.json.registrations||[]);
+  },function(){
+    $("#regSummary").textContent="";
+    $("#regBody").innerHTML='<div class="note pay-err"><b>Nätverksfel.</b> Nås <code>api.php</code> i mappen ovanför? (Lokalt via <code>file://</code> fungerar det inte.)</div>';
+  });
+}
+function renderRegTable(list){
+  REG_DATA=list;
+  var players=0,paid=0;
+  list.forEach(function(r){ var n=parseInt(r.antal,10); if(!isNaN(n))players+=n; if(r.betald)paid++; });
+  $("#regSummary").innerHTML='<b>'+list.length+'</b> lag · <b>'+players+'</b> spelare · <b>'+paid+'</b> betalda';
+  if(!list.length){ $("#regBody").innerHTML='<div class="pay-msg">Inga anmälningar än.</div>'; return; }
+  var rows=list.map(function(r){
+    return '<tr>'+
+      '<td class="pay-team">'+escHtml(r.lagnamn||"—")+'</td>'+
+      '<td>'+escHtml(r.kontakt||"")+'</td>'+
+      '<td class="pay-contact">'+payContact(r)+'</td>'+
+      '<td class="pay-c">'+escHtml(r.antal||"")+'</td>'+
+      '<td class="reg-msg">'+escHtml(r.meddelande||"")+'</td>'+
+      '<td class="pay-when">'+escHtml(payDate(r.tid))+'</td>'+
+      '<td class="pay-c">'+(r.betald?'<span class="reg-paid">Ja</span>':'<span class="reg-unpaid">Nej</span>')+'</td>'+
+    '</tr>';
+  }).join("");
+  $("#regBody").innerHTML='<table class="pay-table reg-table"><thead><tr>'+
+    '<th>Lag</th><th>Kontakt</th><th>E-post / Telefon</th><th class="pay-c">Antal</th><th>Meddelande</th><th>Anmäld</th><th class="pay-c">Betald</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function regRows(){
+  return REG_DATA.map(function(r){
+    return [r.lagnamn,r.kontakt,r.epost,r.telefon,r.antal,r.meddelande,payDate(r.tid),(r.betald?"Ja":"Nej")];
+  });
+}
+function exportRegCsv(){
+  if(!REG_DATA.length){ toast("Inget att exportera."); return; }
+  function cell(v){ return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'; }
+  var lines=[REG_COLS.map(cell).join(",")];
+  regRows().forEach(function(row){ lines.push(row.map(cell).join(",")); });
+  var csv="﻿"+lines.join("\r\n"); /* BOM -> rätt å/ä/ö i Excel */
+  var blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  var url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url; a.download="anmalningar.csv"; document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);a.remove();},100);
+  toast("anmalningar.csv nedladdad.");
+}
+function printReg(){
+  if(!REG_DATA.length){ toast("Inget att skriva ut."); return; }
+  var th=REG_COLS.map(function(c){return '<th>'+escHtml(c)+'</th>';}).join("");
+  var tb=regRows().map(function(row){ return '<tr>'+row.map(function(v){return '<td>'+escHtml(v)+'</td>';}).join("")+'</tr>'; }).join("");
+  var w=window.open("","_blank");
+  if(!w){ toast("Tillåt popup för utskrift."); return; }
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Anmälningar — Ethar Cup</title>'+
+    '<style>body{font-family:Arial,sans-serif;margin:24px;color:#19241f}h1{font-size:18px;margin:0 0 12px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #bbb;padding:6px 8px;text-align:left;vertical-align:top}th{background:#eee}</style>'+
+    '</head><body><h1>Anmälningar — Ethar Cup ('+REG_DATA.length+' lag)</h1><table><thead><tr>'+th+'</tr></thead><tbody>'+tb+'</tbody></table></body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){ w.print(); },300);
 }
 /* (JSONP borttagen — betalningsvyn använder nu api.php via fetch.) */
 

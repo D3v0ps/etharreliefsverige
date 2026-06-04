@@ -63,9 +63,12 @@ Detaljer:
 - Fungerar inte JavaScript får besökaren en länk att mejla anmälan istället.
 - Ändrar ni `.gs`-koden: distribuera en **ny version** (URL:en förblir densamma).
 
-## Betalningar (markera betalda i admin)
-Adminportalen har fliken **Betalningar** som listar alla anmälda lag (från Google
-Sheet) och låter er bocka av **Betald** per lag — det sparas direkt i arket.
+## Anmälningar & betalningar (i admin)
+Admin har två data-flikar som läser anmälningarna från Google Sheet (via `api.php`):
+- **Anmälningar** — läs-vy över alla lag med alla fält (inkl. meddelande), summering (lag · spelare · betalda) och knappar för **CSV-export** och **utskrift**.
+- **Betalningar** — samma lista men med en **Betald**-bock per lag som sparas direkt i arket.
+
+Båda kräver betalningslösenordet (`$ADMIN_PASSWORD` i `api.php`) som anges en gång per session.
 
 Anropen går via **`api.php`** på servern (samma mapp), inte direkt från webbläsaren.
 Det gör att Apps Script-token och betalningslösenordet bara finns på servern och
