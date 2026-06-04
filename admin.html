@@ -189,7 +189,7 @@ a{color:var(--primary);}
         <span>Live förhandsgranskning</span>
         <button class="act act-ghost pv-close" id="pvClose" style="padding:4px 10px">Stäng</button>
       </div>
-      <div class="preview-wrap"><iframe id="preview" src="index.html?preview=1" title="Förhandsgranskning"></iframe></div>
+      <div class="preview-wrap"><iframe id="preview" src="about:blank" title="Förhandsgranskning"></iframe></div>
     </aside>
   </div>
 </div>
@@ -203,6 +203,11 @@ a{color:var(--primary);}
    ========================================================= */
 (function(){
 "use strict";
+
+/* Hitta var syskonfilerna ligger (config.json, api.php, publika index.html).
+   Admin kan serveras som /turnering/admin/ (undermapp), /turnering/admin (rewrite)
+   eller /turnering/admin.html — välj rätt prefix för alla tre fallen. */
+var BASE = /\/admin\/$/.test(location.pathname) ? "../" : "./";
 
 /* ----- schema describing every editable field ----- */
 var SCHEMA=[
@@ -298,7 +303,7 @@ var config=null, published=null, activeSection="brand", dirty=false, postTimer=n
 
 /* ---- payments view ---- */
 var PAY_SECTION="_payments";
-var PAY_API="api.php";              /* server-side proxy (samma mapp) — token & lösenord ligger där, inte här */
+var PAY_API=BASE+"api.php";         /* server-side proxy — token & lösenord ligger där, inte i klienten */
 var PAY_PASS_KEY="etharPayPass_v1"; /* betalningslösenordet sparas i sessionStorage under sessionen */
 
 /* ---- helpers ---- */
@@ -310,7 +315,7 @@ function toast(msg){var t=$("#toast");t.textContent=msg;t.classList.add("show");
 
 /* ---- load config ---- */
 function loadConfig(){
-  return fetch("config.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+  return fetch(BASE+"config.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
     published = j || (window.FALLBACK_CONFIG||{});
     var draft=null;
     try{ var d=localStorage.getItem(DRAFT_KEY); if(d) draft=JSON.parse(d); }catch(e){}
@@ -604,6 +609,8 @@ window.addEventListener("message",function(ev){
 
 /* ---- boot ---- */
 loadConfig().then(function(){
+  // peka förhandsgranskningen mot den publika sidan (rätt mapp via BASE)
+  $("#preview").src=BASE+"index.html?preview=1";
   // gate
   $("#gateForm").addEventListener("submit",function(e){
     e.preventDefault();
