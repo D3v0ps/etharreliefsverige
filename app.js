@@ -177,6 +177,40 @@
         '</div>'+
       '</div></div>';
 
+    /* ---- vendor form (uteställare) ---- */
+    var vf=cfg.vendorForm||{};
+    var vcats=(vf.categories&&vf.categories.length?vf.categories:["Mat & dryck","Hantverk","Kläder & accessoarer","Välgörenhet / info","Annat"]);
+    var vcatOpts='<option value="" disabled selected>Välj…</option>'+vcats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join("");
+    $("#utestallare").innerHTML =
+      '<div class="wrap"><div class="form-shell reveal">'+
+        '<div class="form-aside">'+
+          '<p class="eyebrow">Uteställare</p>'+
+          '<h2>'+esc(vf.title||"Bli uteställare")+'</h2>'+
+          '<p>'+esc(vf.intro||"")+'</p>'+
+        '</div>'+
+        '<div class="form-card">'+
+          '<div class="form-msg err" id="utErr"></div>'+
+          '<div class="form-success" id="utSuccess">'+
+            '<div class="ico"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'+
+            '<h3>'+esc(vf.successTitle||"Tack för din ansökan!")+'</h3>'+
+            '<p>'+esc(vf.successText||"")+'</p>'+
+          '</div>'+
+          '<form id="utForm" novalidate>'+
+            field("Företag / namn","foretag","text",true,"","fut_")+
+            field("Kontaktperson","kontakt","text",true,"För- och efternamn","fut_")+
+            '<div class="field-row">'+
+              field("E-postadress","epost","email",true,"","fut_")+
+              field("Telefonnummer","telefon","tel",true,"","fut_")+
+            '</div>'+
+            selectField("Vad säljer/erbjuder ni?","kategori",vcatOpts,true,"fut_")+
+            textarea("Meddelande / önskemål (t.ex. behov av el eller yta)","meddelande",false,"fut_")+
+            '<label class="check"><input type="checkbox" id="utGodkann" required><span>Jag vill ansöka om en plats som uteställare och blir kontaktad med villkor. <span class="req">*</span></span></label>'+
+            '<button type="submit" class="btn btn-primary">Skicka ansökan <span class="arrow">→</span></button>'+
+            '<p class="form-fallback">Formuläret kräver JavaScript. Du kan annars mejla din ansökan till <a href="mailto:'+esc(vf.fallbackEmail||"")+'">'+esc(vf.fallbackEmail||"")+'</a>.</p>'+
+          '</form>'+
+        '</div>'+
+      '</div></div>';
+
     /* ---- find us ---- */
     var fu=cfg.findus||{};
     var rows=(fu.items||[]).map(function(it){
@@ -243,32 +277,31 @@
     if(!dl) return "";
     return '<div class="deadline"><b>'+esc(dl.label)+':</b> '+esc(dl.value)+'</div>';
   }
-  function field(label,name,type,req,ph){
-    return '<div class="field"><label for="f_'+name+'">'+esc(label)+(req?' <span class="req">*</span>':'')+'</label>'+
-      '<input id="f_'+name+'" name="'+name+'" type="'+type+'"'+(req?' required':'')+(ph?' placeholder="'+esc(ph)+'"':'')+(type==="number"?' min="1"':'')+'></div>';
+  function field(label,name,type,req,ph,pfx){ pfx=pfx||"f_";
+    return '<div class="field"><label for="'+pfx+name+'">'+esc(label)+(req?' <span class="req">*</span>':'')+'</label>'+
+      '<input id="'+pfx+name+'" name="'+name+'" type="'+type+'"'+(req?' required':'')+(ph?' placeholder="'+esc(ph)+'"':'')+(type==="number"?' min="1"':'')+'></div>';
   }
-  function textarea(label,name,req){
-    return '<div class="field"><label for="f_'+name+'">'+esc(label)+(req?' <span class="req">*</span>':'')+'</label>'+
-      '<textarea id="f_'+name+'" name="'+name+'"'+(req?' required':'')+'></textarea></div>';
+  function textarea(label,name,req,pfx){ pfx=pfx||"f_";
+    return '<div class="field"><label for="'+pfx+name+'">'+esc(label)+(req?' <span class="req">*</span>':'')+'</label>'+
+      '<textarea id="'+pfx+name+'" name="'+name+'"'+(req?' required':'')+'></textarea></div>';
+  }
+  function selectField(label,name,optionsHtml,req,pfx){ pfx=pfx||"f_";
+    return '<div class="field"><label for="'+pfx+name+'">'+esc(label)+(req?' <span class="req">*</span>':'')+'</label>'+
+      '<select id="'+pfx+name+'" name="'+name+'"'+(req?' required':'')+'>'+optionsHtml+'</select></div>';
   }
 
-  /* -------- form submit -------- */
-  function wireForm(cfg){
-    var form=$("#lagForm"); if(!form) return;
+  /* -------- form submit (delas av lag- och uteställarformuläret) -------- */
+  function wireOneForm(cfg,spec){
+    var form=$(spec.formId); if(!form) return;
     var endpoint=(cfg.settings&&cfg.settings.formEndpoint)||"";
     form.addEventListener("submit",function(e){
       e.preventDefault();
-      var errBox=$("#lagErr");
-      errBox.classList.remove("show");
-      // validation
+      var errBox=$(spec.errId); errBox.classList.remove("show");
       var invalid=[];
-      ["lagnamn","kontakt","epost","telefon","antal"].forEach(function(n){
-        var el=form.elements[n];
-        if(!el.value.trim()){invalid.push(el);}
-      });
-      var em=form.elements.epost;
-      if(em.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value)) invalid.push(em);
-      if(!form.elements.lagGodkann.checked) invalid.push(form.elements.lagGodkann);
+      spec.required.forEach(function(n){ var el=form.elements[n]; if(el&&!String(el.value).trim()) invalid.push(el); });
+      var em=form.elements[spec.emailField];
+      if(em && em.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value)) invalid.push(em);
+      if(spec.termsId){ var t=form.elements[spec.termsId]; if(t && !t.checked) invalid.push(t); }
       if(invalid.length){
         invalid[0].focus();
         errBox.textContent="Fyll i alla obligatoriska fält korrekt och godkänn villkoren.";
@@ -276,17 +309,15 @@
         return;
       }
       var data=new URLSearchParams();
-      data.append("formtyp","lag");
-      ["lagnamn","kontakt","epost","telefon","antal","meddelande"].forEach(function(n){
-        data.append(n, form.elements[n].value.trim());
-      });
+      data.append("formtyp",spec.formtyp);
+      spec.send.forEach(function(n){ var el=form.elements[n]; data.append(n, el?String(el.value).trim():""); });
       var btn=form.querySelector("button[type=submit]");
       var orig=btn.innerHTML; btn.disabled=true; btn.innerHTML="Skickar…";
 
-      function done(){ $("#lagForm").style.display="none"; $("#lagSuccess").classList.add("show"); }
+      function done(){ form.style.display="none"; $(spec.successId).classList.add("show"); }
       function fail(){
         btn.disabled=false; btn.innerHTML=orig;
-        errBox.innerHTML='Något gick fel. Försök igen eller mejla <a href="mailto:'+esc((cfg.teamForm&&cfg.teamForm.fallbackEmail)||"")+'">'+esc((cfg.teamForm&&cfg.teamForm.fallbackEmail)||"")+'</a>.';
+        errBox.innerHTML='Något gick fel. Försök igen eller mejla <a href="mailto:'+esc(spec.fallbackEmail||"")+'">'+esc(spec.fallbackEmail||"")+'</a>.';
         errBox.classList.add("show");
       }
       if(!endpoint){
@@ -294,14 +325,22 @@
         setTimeout(done,600); return;
       }
       var opts={method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:data.toString()};
-      // Google Apps Script-webbappar skickar inga CORS-headers, så att läsa svaret
-      // ger ett CORS-fel även när raden sparats. Skicka därför "fire-and-forget"
-      // (no-cors -> opaque) för dem; success-kollen nedan hanterar opaque-svar.
+      // Google Apps Script-webbappar skickar inga CORS-headers, så skicka "fire-and-forget".
       if(/script\.google(usercontent)?\.com/.test(endpoint)) opts.mode="no-cors";
       fetch(endpoint,opts)
         .then(function(r){ if(r.ok||r.type==="opaque") done(); else fail(); })
         .catch(fail);
     });
+  }
+  function wireForm(cfg){
+    wireOneForm(cfg,{ formId:"#lagForm", errId:"#lagErr", successId:"#lagSuccess",
+      required:["lagnamn","kontakt","epost","telefon","antal"], emailField:"epost", termsId:"lagGodkann",
+      send:["lagnamn","kontakt","epost","telefon","antal","meddelande"], formtyp:"lag",
+      fallbackEmail:(cfg.teamForm&&cfg.teamForm.fallbackEmail)||"" });
+    wireOneForm(cfg,{ formId:"#utForm", errId:"#utErr", successId:"#utSuccess",
+      required:["foretag","kontakt","epost","telefon","kategori"], emailField:"epost", termsId:"utGodkann",
+      send:["foretag","kontakt","epost","telefon","kategori","meddelande"], formtyp:"utestallare",
+      fallbackEmail:(cfg.vendorForm&&cfg.vendorForm.fallbackEmail)||"" });
   }
 
   /* -------- mobile menu -------- */

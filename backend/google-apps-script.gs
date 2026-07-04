@@ -1,52 +1,54 @@
 /**
- * Ethar Cup — anmälningar & betalningar  (Google Apps Script, bundet till ett Sheet)
- * ---------------------------------------------------------------------------------
- *  - Publika formuläret POSTar hit        -> ny rad i arket            (doPost)
- *  - Adminportalen läser listan           -> doGet?action=list         (JSONP)
- *  - Adminportalen bockar av "Betald"     -> doGet?action=setPaid      (JSONP)
+ * Ethar Cup — anmälningar, uteställare & betalningar  (Google Apps Script, bundet till ett Sheet)
+ * ---------------------------------------------------------------------------------------------
+ *  • Publika lagformuläret POSTar hit (formtyp=lag)          -> ny rad i FÖRSTA fliken   (doPost)
+ *  • Uteställar-formuläret POSTar hit (formtyp=utestallare)  -> ny rad i fliken "Uteställare"
+ *  • Adminportalen läser laglistan     -> doGet?action=list         (JSONP/proxy)
+ *  • Adminportalen bockar av "Betald"  -> doGet?action=setPaid      (JSONP/proxy)
  *
- *  Kolumner i arket:
- *    Tidpunkt | Lagnamn | Kontakt | E-post | Telefon | Antal | Meddelande | Typ | Betald
+ *  Fliken "Blad1" (lag):   Tidpunkt | Lagnamn | Kontakt | E-post | Telefon | Antal | Meddelande | Typ | Betald
+ *  Fliken "Uteställare":   Tidpunkt | Företag | Kontakt | E-post | Telefon | Kategori | Meddelande
  *
  *  INSTÄLLNING (en gång):
- *   1. Skapa ett Google Sheet (anmälningslistan = er "excel").
- *   2. I kalkylarket: Tillägg (Extensions) -> Apps Script. Klistra in HELA koden. Spara.
- *   3. Sätt NOTIFY_EMAIL och ADMIN_TOKEN nedan.
- *        ADMIN_TOKEN MÅSTE vara samma som PAY_TOKEN överst i admin.html.
- *   4. Distribuera (Deploy) -> Ny distribution -> typ: Webbapp.
- *        - Kör som (Execute as): Jag själv (Me)
- *        - Vem har åtkomst (Who has access): Alla (Anyone)   <-- VIKTIGT
- *      Kopiera /exec-URL:en till config.json ("settings.formEndpoint").
- *   5. Ändrar ni koden senare: Distribuera -> Hantera distributioner -> redigera ->
- *      Ny version. /exec-URL:en förblir densamma.
- *
- *  Formuläret skickar: formtyp, lagnamn, kontakt, epost, telefon, antal, meddelande.
+ *   1. Skapa ett Google Sheet.
+ *   2. Tillägg -> Apps Script. Klistra in HELA denna kod. Spara.
+ *   3. Sätt NOTIFY_EMAIL och ADMIN_TOKEN nedan. ADMIN_TOKEN MÅSTE vara samma som
+ *      $APPS_SCRIPT_TOKEN i api.php.
+ *   4. Distribuera -> Ny distribution -> Webbapp. Kör som: Jag själv. Åtkomst: Alla.
+ *   5. Ändrar ni koden: Distribuera -> Hantera distributioner -> ny version.
  */
 
 var NOTIFY_EMAIL = "info@etharreliefsverige.se"; // "" = skicka inget mejl
-var ADMIN_TOKEN  = "ec-2026-9f3a7c";             // = PAY_TOKEN i admin.html (byt gärna)
+var ADMIN_TOKEN  = "ec-2026-9f3a7c";             // = $APPS_SCRIPT_TOKEN i api.php
 
 var HEADERS  = ["Tidpunkt", "Lagnamn", "Kontakt", "E-post", "Telefon",
                 "Antal", "Meddelande", "Typ", "Betald"];
 var COL_PAID = 9; // 1-baserad kolumn för "Betald"
 
-function sheet_() { return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0]; }
-function ensureHeader_(sh) { if (sh.getLastRow() === 0) sh.appendRow(HEADERS); }
+var VENDOR_SHEET   = "Uteställare";
+var VENDOR_HEADERS = ["Tidpunkt", "Företag", "Kontakt", "E-post", "Telefon", "Kategori", "Meddelande"];
 
-/* ---------------- Publik anmälan (POST) ---------------- */
+function teamSheet_()   { return SpreadsheetApp.getActiveSpreadsheet().getSheets()[0]; }
+function ensureHeader_(sh, headers) { if (sh.getLastRow() === 0) sh.appendRow(headers); }
+
+/* ---------------- Publika formulär (POST) ---------------- */
 function doPost(e) {
+  var p = (e && e.parameter) || {};
+  if (p.formtyp === "utestallare") return handleVendor_(p);
+  return handleTeam_(p);
+}
+
+function handleTeam_(p) {
   var lock = LockService.getScriptLock();
-  lock.waitLock(20000); // undvik krockar vid samtidiga anmälningar
+  lock.waitLock(20000);
   try {
-    var p = (e && e.parameter) || {};
-    var sh = sheet_();
-    ensureHeader_(sh);
+    var sh = teamSheet_();
+    ensureHeader_(sh, HEADERS);
     sh.appendRow([
       new Date(),
       p.lagnamn || "", p.kontakt || "", p.epost || "", p.telefon || "",
       p.antal || "", p.meddelande || "", p.formtyp || "lag", ""
     ]);
-
     if (NOTIFY_EMAIL) {
       MailApp.sendEmail(
         NOTIFY_EMAIL,
@@ -67,7 +69,39 @@ function doPost(e) {
   }
 }
 
-/* ---------------- Admin: lista + markera betald (GET/JSONP) ---------------- */
+function handleVendor_(p) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName(VENDOR_SHEET) || ss.insertSheet(VENDOR_SHEET);
+    ensureHeader_(sh, VENDOR_HEADERS);
+    sh.appendRow([
+      new Date(),
+      p.foretag || "", p.kontakt || "", p.epost || "", p.telefon || "",
+      p.kategori || "", p.meddelande || ""
+    ]);
+    if (NOTIFY_EMAIL) {
+      MailApp.sendEmail(
+        NOTIFY_EMAIL,
+        "Ny uteställar-ansökan: " + (p.foretag || "okänd"),
+        "Företag/namn: " + (p.foretag || "") + "\n" +
+        "Kontaktperson: " + (p.kontakt || "") + "\n" +
+        "E-post: " + (p.epost || "") + "\n" +
+        "Telefon: " + (p.telefon || "") + "\n" +
+        "Kategori: " + (p.kategori || "") + "\n" +
+        "Meddelande: " + (p.meddelande || "") + "\n"
+      );
+    }
+    return json_({ ok: true });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------------- Admin: lista + markera betald (GET) ---------------- */
 function doGet(e) {
   var p = (e && e.parameter) || {};
   if (p.action === "list")    return reply_(p.callback, list_(p.token));
@@ -77,13 +111,13 @@ function doGet(e) {
 
 function list_(token) {
   if (token !== ADMIN_TOKEN) return { ok: false, error: "auth" };
-  var values = sheet_().getDataRange().getValues();
+  var values = teamSheet_().getDataRange().getValues();
   var out = [];
   for (var i = 1; i < values.length; i++) {       // rad 0 = rubriker
     var r = values[i];
     if (!r[1] && !r[2] && !r[3]) continue;         // hoppa tomma rader
     out.push({
-      row: i + 1,                                  // 1-baserat radnummer i arket
+      row: i + 1,
       tid: r[0], lagnamn: r[1], kontakt: r[2], epost: r[3],
       telefon: r[4], antal: r[5], meddelande: r[6], typ: r[7],
       betald: isPaid_(r[8])
@@ -99,8 +133,8 @@ function setPaid_(token, row, paid) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var sh = sheet_();
-    ensureHeader_(sh);
+    var sh = teamSheet_();
+    ensureHeader_(sh, HEADERS);
     if (String(sh.getRange(1, COL_PAID).getValue()) === "") sh.getRange(1, COL_PAID).setValue("Betald");
     var on = (String(paid) === "1" || String(paid).toLowerCase() === "true");
     sh.getRange(n, COL_PAID).setValue(on ? "Ja" : "");

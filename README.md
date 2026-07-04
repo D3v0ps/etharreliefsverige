@@ -62,6 +62,10 @@ Detaljer:
 - Är `formEndpoint` tomt körs ett **testläge** (visar bekräftelse utan att skicka).
 - Fungerar inte JavaScript får besökaren en länk att mejla anmälan istället.
 - Ändrar ni `.gs`-koden: distribuera en **ny version** (URL:en förblir densamma).
+- **Uteställare:** ansökningar från uteställar-formuläret (`formtyp=utestallare`) hamnar i en egen flik **Uteställare** i arket — separat från lagen. Kräver den uppdaterade `.gs` + ny distribution.
+
+## Två anmälningsknappar
+Hero-sektionen har två tydliga knappar: **Anmäl ditt lag** (→ lagformuläret) och **Bli uteställare** (→ uteställar-formuläret). Etiketter/mål ändras i admin under **Hero**. Uteställar-formulärets texter ändras under **Uteställare**.
 
 ## Anmälningar & betalningar (i admin)
 Admin har två data-flikar som läser anmälningarna från Google Sheet (via `api.php`):
