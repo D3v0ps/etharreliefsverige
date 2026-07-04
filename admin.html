@@ -149,6 +149,7 @@ a{color:var(--primary);}
 .pay-login input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.1);}
 .pay-login .act-primary{color:#fff;}
 .reg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+#payBody,#regBody{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .reg-table td{font-size:.86rem;}
 .reg-msg{max-width:280px;color:var(--muted);font-size:.82rem;white-space:pre-wrap;}
 .reg-paid{display:inline-block;font-weight:700;font-size:.78rem;color:#1d7a45;background:#e2f0e6;border-radius:6px;padding:2px 8px;}
@@ -273,6 +274,14 @@ var SCHEMA=[
     {k:"title",label:"Rubrik",type:"text"},
     {k:"intro",label:"Introtext",type:"textarea"},
     {k:"fallbackEmail",label:"Fallback e-post",type:"text",hint:"Visas om formuläret inte fungerar."},
+    {k:"successTitle",label:"Bekräftelse — rubrik",type:"text"},
+    {k:"successText",label:"Bekräftelse — text",type:"textarea"}
+  ]},
+  {key:"vendorForm",icon:"🛍️",label:"Uteställare",desc:"Texter för uteställar-formuläret.",fields:[
+    {k:"title",label:"Rubrik",type:"text"},
+    {k:"intro",label:"Introtext",type:"textarea"},
+    {k:"categories",label:"Kategorier (dropdown)",type:"list",hint:"Alternativ i menyn för vad uteställaren erbjuder.",item:[{k:"",label:"Kategori",type:"text"}]},
+    {k:"fallbackEmail",label:"Fallback e-post",type:"text"},
     {k:"successTitle",label:"Bekräftelse — rubrik",type:"text"},
     {k:"successText",label:"Bekräftelse — text",type:"textarea"}
   ]},
