@@ -1,0 +1,70 @@
+name: Deploy till one.com
+
+# Laddar automatiskt upp sajten till one.com (mappen turnering/) via FTPS
+# varje gång sajtfiler ändras på main. Kan även köras manuellt (Actions-fliken),
+# då med valfri testkörning (dry-run) som bara visar vad som skulle laddas upp.
+#
+# Kräver dessa hemligheter under GitHub → Settings → Secrets and variables → Actions:
+#   FTP_SERVER          t.ex. ftp.etharreliefsverige.se  (visas i one.com: SSH & FTP)
+#   FTP_USERNAME        FTP-användarnamnet från one.com
+#   FTP_PASSWORD        FTP-lösenordet
+#   PAY_ADMIN_PASSWORD  (valfri) riktiga betalningslösenordet — injiceras i api.php.
+#                       Om den INTE är satt laddas api.php aldrig upp, så serverns
+#                       befintliga api.php (med ert riktiga lösenord) lämnas orörd.
+# Valfri variabel (Variables-fliken):
+#   FTP_SERVER_DIR      målmapp på servern, standard "turnering/"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - styles.css
+      - app.js
+      - config.json
+      - admin.html
+      - api.php
+      - .htaccess
+      - .github/workflows/deploy.yml
+      - .github/scripts/**
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Testkörning: visa vad som skulle laddas upp utan att ändra något"
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-one-com
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Bygg deploy-mappen (samma struktur som på servern)
+        env:
+          PAY_ADMIN_PASSWORD: ${{ secrets.PAY_ADMIN_PASSWORD }}
+        run: |
+          mkdir -p deploy/admin
+          cp index.html styles.css app.js config.json .htaccess deploy/
+          # Admin ligger som turnering/admin/index.html på servern (snygg URL)
+          cp admin.html deploy/admin/index.html
+          # api.php: laddas bara upp om PAY_ADMIN_PASSWORD-secreten finns (injiceras då)
+          python3 .github/scripts/prepare_api.py
+          echo "Filer som deployas:"
+          find deploy -type f | sort
+
+      - name: Ladda upp via FTPS till one.com
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: deploy/
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'turnering/' }}
+          dry-run: ${{ inputs.dry-run || false }}
