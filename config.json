@@ -2,12 +2,12 @@
   "brand": {
     "name": "Ethar Relief Sverige",
     "tagline": "Remembering the Forgotten",
-    "logoUrl": "",
-    "primary": "#bd8100",
-    "primaryDark": "#d5ae6d",
-    "accent": "#d65c5c",
-    "accentDark": "#f50000",
-    "bg": "#F5F5F3"
+    "logoUrl": "https://www.etharreliefsverige.se/wp-content/uploads/2026/02/Beige-Blue-Simple-Geometric-Research-Project-Presentation.png",
+    "primary": "#a84f1d",
+    "primaryDark": "#a84f1d",
+    "accent": "#1d4742",
+    "accentDark": "#53726e",
+    "bg": "#d9d9d9"
   },
   "nav": {
     "donateLabel": "Donera",
@@ -141,16 +141,19 @@
     },
     "instagram": [
       {
-        "url": "https://www.instagram.com/p/DMIUlujI0Ue/",
-        "caption": "Höjdpunkter från speldagen"
+        "url": "https://www.etharreliefsverige.se/wp-content/uploads/2026/07/turn4.jpeg",
+        "caption": "Höjdpunkter från speldagen",
+        "imageUrl": "https://www.etharreliefsverige.se/wp-content/uploads/2026/07/turn3.jpeg"
       },
       {
         "url": "https://www.instagram.com/p/DMZwj5voT07/",
-        "caption": "Stämning vid sidan av planen"
+        "caption": "Stämning vid sidan av planen",
+        "imageUrl": "https://www.etharreliefsverige.se/wp-content/uploads/2026/07/turn1.jpeg"
       },
       {
         "url": "https://www.instagram.com/p/DM_U0Iwon1z/",
-        "caption": "Finalen och prisutdelningen"
+        "caption": "Finalen och prisutdelningen",
+        "imageUrl": "https://www.etharreliefsverige.se/wp-content/uploads/2026/07/turn2.jpeg"
       }
     ]
   },
