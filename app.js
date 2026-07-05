@@ -67,7 +67,8 @@
 
     /* ---- hero ---- */
     var h=cfg.hero||{};
-    var photo = h.imageUrl ? '<div class="hero-photo" style="background-image:url('+JSON.stringify(h.imageUrl)+')"></div>' : '<div class="hero-photo" aria-hidden="true"></div>';
+    /* OBS: enkla citattecken i url('...') — dubbla skulle avsluta style-attributet */
+    var photo = h.imageUrl ? '<div class="hero-photo" style="background-image:url(\''+esc(h.imageUrl)+'\')"></div>' : '<div class="hero-photo" aria-hidden="true"></div>';
     var chips=(h.chips||[]).map(function(c){
       return '<span class="chip"><span>'+esc(c.label)+'</span><b>'+esc(c.value)+'</b></span>';
     }).join("");
@@ -107,7 +108,7 @@
     var stats=(s.stats||[]).map(function(st){return '<div class="stat"><b>'+esc(st.value)+'</b><span>'+esc(st.label)+'</span></div>';}).join("");
     var press=s.press||{};
     var igCards=(s.instagram||[]).map(function(ig){
-      var thumb = ig.imageUrl ? ' style="background-image:url('+JSON.stringify(ig.imageUrl)+')"' : '';
+      var thumb = ig.imageUrl ? ' style="background-image:url(\''+esc(ig.imageUrl)+'\')"' : '';
       return '<a class="ig-card" href="'+esc(ig.url)+'" target="_blank" rel="noopener" aria-label="Öppna inlägg på Instagram">'+
         '<div class="ig-thumb"'+thumb+'></div>'+
         '<span class="play-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>'+

@@ -51,6 +51,36 @@ if (!hash_equals($ADMIN_PASSWORD, (string)$pass)) {
 }
 
 // ============================================================
+// BILDUPPLADDNING – sparas i mappen uploads/ bredvid denna fil
+// (kräver rätt lösenord, kontrollerat ovan)
+// ============================================================
+if ($action === 'upload') {
+    if (empty($_FILES['file']['tmp_name']) || !is_uploaded_file($_FILES['file']['tmp_name'])) {
+        out(400, ['ok' => false, 'error' => 'file']);
+    }
+    if ($_FILES['file']['size'] > 8 * 1024 * 1024) {
+        out(400, ['ok' => false, 'error' => 'size']); // max 8 MB
+    }
+    // Godkänn bara riktiga bildfiler (innehållet kontrolleras, inte filnamnet)
+    $info  = @getimagesize($_FILES['file']['tmp_name']);
+    $types = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png',
+              IMAGETYPE_GIF  => 'gif', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($types[$info[2]])) {
+        out(400, ['ok' => false, 'error' => 'type']);
+    }
+    $dir = __DIR__ . '/uploads';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        out(500, ['ok' => false, 'error' => 'mkdir']);
+    }
+    $name = 'bild-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '.' . $types[$info[2]];
+    if (!move_uploaded_file($_FILES['file']['tmp_name'], $dir . '/' . $name)) {
+        out(500, ['ok' => false, 'error' => 'move']);
+    }
+    // Relativ URL – fungerar både på publika sidan och i adminens förhandsgranskning
+    out(200, ['ok' => true, 'url' => 'uploads/' . $name]);
+}
+
+// ============================================================
 // BYGG URL TILL APPS SCRIPT BEROENDE PÅ ÅTGÄRD
 // ============================================================
 if ($action === 'list') {

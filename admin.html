@@ -149,6 +149,9 @@ a{color:var(--primary);}
 .pay-login input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(17,70,59,.1);}
 .pay-login .act-primary{color:#fff;}
 .reg-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.upl-btn{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 13px;border:1.5px dashed var(--line);background:#fff;border-radius:8px;color:var(--primary);font-weight:700;font-size:.82rem;cursor:pointer;}
+.upl-btn:hover{border-color:var(--primary);background:#f4f8f5;}
+.upl-btn:disabled{opacity:.6;cursor:wait;}
 #payBody,#regBody{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .reg-table td{font-size:.86rem;}
 .reg-msg{max-width:280px;color:var(--muted);font-size:.82rem;white-space:pre-wrap;}
@@ -369,6 +372,47 @@ function renderEditor(){
   sec.fields.forEach(function(f){ html+=renderField(sec.key,f,secData); });
   $("#editor").innerHTML=html;
   bindFields(sec);
+  enhanceImageInputs();
+}
+
+/* ---- bilduppladdning: knapp vid alla bild-URL-fält ---- */
+function enhanceImageInputs(){
+  $("#editor").querySelectorAll('input[type=text]').forEach(function(inp){
+    var key = inp.dataset.path || inp.dataset.sk || "";
+    if(!/(logoUrl|imageUrl)$/i.test(key)) return;
+    if(inp.dataset.upl) return;
+    inp.dataset.upl = "1";
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "upl-btn"; btn.textContent = "📷 Ladda upp bild…";
+    var file = document.createElement("input");
+    file.type = "file"; file.accept = "image/jpeg,image/png,image/webp,image/gif"; file.hidden = true;
+    inp.insertAdjacentElement("afterend", btn);
+    btn.insertAdjacentElement("afterend", file);
+    btn.onclick = function(){ file.click(); };
+    file.onchange = function(){
+      var f = file.files[0]; file.value = ""; if(!f) return;
+      if(f.size > 8*1024*1024){ toast("Bilden är större än 8 MB — förminska den först."); return; }
+      if(!payPass()){
+        var p = prompt("Lösenord för uppladdning (samma som för Betalningar):");
+        if(!p) return; setPayPass(p);
+      }
+      btn.disabled = true; btn.textContent = "Laddar upp…";
+      function reset(){ btn.disabled = false; btn.textContent = "📷 Ladda upp bild…"; }
+      var fd = new FormData();
+      fd.append("action","upload"); fd.append("pass",payPass()); fd.append("file",f);
+      fetch(PAY_API,{method:"POST",body:fd})
+        .then(function(r){ return r.text().then(function(t){ var j=null; try{j=JSON.parse(t);}catch(e){} return {s:r.status,j:j}; }); })
+        .then(function(res){
+          reset();
+          if(res.s===401){ setPayPass(""); toast("Fel lösenord — klicka och försök igen."); return; }
+          if(!res.j||!res.j.ok){ toast("Uppladdningen misslyckades"+(res.j&&res.j.error?" ("+res.j.error+")":"")+"."); return; }
+          inp.value = res.j.url;
+          inp.dispatchEvent(new Event("input"));
+          toast("Bilden uppladdad ✓ Glöm inte Publicera när du är klar.");
+        })
+        .catch(function(){ reset(); toast("Nätverksfel vid uppladdning. Obs: fungerar bara på riktiga servern (api.php)."); });
+    };
+  });
 }
 
 function renderField(secKey,f,data){
