@@ -8,9 +8,42 @@
 - **.htaccess** — sätter startsida + snygg admin-adress i mappen.
 - **backend/google-apps-script.gs** — kod för anmälnings-backend (klistras in i Google Apps Script; laddas *inte* upp till webbhotellet).
 - **api.php** — server-side proxy för betalningsvyn (token + lösenord ligger här, inte i klienten).
+- **.github/workflows/deploy.yml** — automatisk uppladdning till one.com vid varje push till `main`.
 
 Ladda upp den publika sidans filer till samma mapp på webbhotellet (t.ex. One.com):
 `index.html`, `styles.css`, `app.js`, `admin.html`, `config.json`, `.htaccess`.
+
+## Automatisk deploy till one.com (GitHub Actions)
+Varje push till `main` som rör sajtfiler laddar automatiskt upp dem till
+`turnering/` på one.com via FTPS — ingen manuell uppladdning behövs.
+Admin läggs som `turnering/admin/index.html` (den snygga adressen), och
+`backend/`, README m.m. deployas aldrig.
+
+**Engångs-setup (görs i GitHub, inte i koden):**
+1. Hitta FTP-uppgifterna i one.com:s kontrollpanel (**SSH & FTP**): server
+   (t.ex. `ftp.etharreliefsverige.se`), användarnamn, och sätt ett FTP-lösenord.
+2. GitHub-repot → **Settings → Secrets and variables → Actions → New repository secret**:
+   - `FTP_SERVER` — FTP-servern
+   - `FTP_USERNAME` — användarnamnet
+   - `FTP_PASSWORD` — lösenordet
+   - `PAY_ADMIN_PASSWORD` *(valfri men rekommenderad)* — det riktiga
+     betalningslösenordet. Sätts den, deployas `api.php` med lösenordet
+     injicerat. Sätts den INTE, hoppar deployen över `api.php` helt och
+     serverns befintliga fil (med ert manuellt satta lösenord) lämnas orörd.
+3. (Valfritt) Fliken **Variables**: `FTP_SERVER_DIR` om målmappen inte är
+   `turnering/` — beror på var FTP-kontot landar; justera t.ex. till
+   `etharreliefsverige.se/turnering/` om testkörningen visar det.
+4. Testa säkert: **Actions → "Deploy till one.com" → Run workflow** med
+   **dry-run** ibockad — då loggas vad som *skulle* laddas upp utan att något ändras.
+
+**Viktigt om `config.json`:** deployen skriver över serverns `config.json` med
+repo-versionen. Publicerar ni innehåll via admin (**Publicera → ladda upp**)
+måste samma ändring även in i repot (enklast: be Claude föra in ändringen och
+pusha) — annars återställs den vid nästa deploy. Enklast är att låta alla
+innehållsändringar gå via repot.
+
+Deployen raderar aldrig något utanför sin egen mapp och använder ingen
+"clean slate" — WordPress-sajten påverkas inte.
 
 ## Lägga upp på one.com bredvid WordPress (undermapp)
 Sidan är helt statisk och alla länkar är relativa, så den kan ligga i en
